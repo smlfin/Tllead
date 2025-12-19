@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Traders Loan Lead System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 650px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; border-bottom: 2px solid #e8eaed; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #3c4043; }
+        /* Mandatory indicator */
+        label::after { content: " *"; color: #d93025; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        input:focus, select:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+        .hidden { display: none; }
+        button { background: #1a73e8; color: white; padding: 14px; border: none; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #9aa0a6; cursor: not-allowed; }
+        .section-title { font-size: 12px; text-transform: uppercase; color: #70757a; margin-top: 25px; margin-bottom: 10px; font-weight: bold; letter-spacing: 1px; border-left: 4px solid #1a73e8; padding-left: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Traders Loan Lead Entry</h2>
+    <form id="leadForm">
+        
+        <div class="section-title">Executive & Branch Info</div>
+        <div class="form-group">
+            <label>Date of Visit</label>
+            <input type="date" id="date" required>
+        </div>
+
+        <div class="form-group">
+            <label>Branch</label>
+            <select id="branch" required>
+                <option value="">-- Select Branch --</option>
+                <option value="KUNNAMKULAM">KUNNAMKULAM</option>
+                <option value="PARAVOOR">PARAVOOR</option>
+                <option value="HARIPPAD">HARIPPAD</option>
+                <option value="KATTAPPANA">KATTAPPANA</option>
+                <option value="MATTANCHERY">MATTANCHERY</option>
+                <option value="PATHANAMTHITTA">PATHANAMTHITTA</option>
+                <option value="KOTTAYAM">KOTTAYAM</option>
+                <option value="ALATHUR">ALATHUR</option>
+                <option value="ANGAMALY">ANGAMALY</option>
+                <option value="CHENGANNOOR">CHENGANNOOR</option>
+                <option value="EDAPPALLY">EDAPPALLY</option>
+                <option value="KODUVAYOOR">KODUVAYOOR</option>
+                <option value="MAVELIKKARA">MAVELIKKARA</option>
+                <option value="MUVATTUPUZHA">MUVATTUPUZHA</option>
+                <option value="NEDUMKANDOM">NEDUMKANDOM</option>
+                <option value="NENMARA">NENMARA</option>
+                <option value="THIRUVILAMALAI">THIRUVILAMALAI</option>
+                <option value="KUZHALMANNAM">KUZHALMANNAM</option>
+                <option value="THIRUVALLA">THIRUVALLA</option>
+                <option value="THODUPUZHA">THODUPUZHA</option>
+                <option value="PERUMBAVOOR">PERUMBAVOOR</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Executive Name</label>
+            <input type="text" id="execName" placeholder="Full Name" required>
+        </div>
+        <div class="form-group">
+            <label>Employee Code</label>
+            <input type="text" id="empCode" placeholder="E-XXXX" required>
+        </div>
+
+        <div class="section-title">Sector & Business Details</div>
+        <div class="form-group">
+            <label>Sector</label>
+            <select id="sectorSelect" onchange="updateBusinessOptions()" required>
+                <option value="">-- Select Sector --</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="businessGroup">
+            <label>Business Category</label>
+            <select id="businessSelect" required>
+                <option value="">-- Select Sector First --</option>
+            </select>
+        </div>
+
+        <div class="form-group hidden" id="otherBusinessGroup">
+            <label>Specify Business Type (Others)</label>
+            <input type="text" id="otherBusinessInput" placeholder="Enter business type">
+        </div>
+
+        <div class="form-group">
+            <label>Actual Business Name (Shop Name)</label>
+            <input type="text" id="shopName" placeholder="e.g. Royal Traders" required>
+        </div>
+
+        <div class="section-title">Customer Contact & Status</div>
+        <div class="form-group">
+            <label>Owner Name</label>
+            <input type="text" id="ownerName" required>
+        </div>
+
+        <div class="form-group">
+            <label>Owner Number</label>
+            <input type="tel" id="ownerPhone" pattern="[0-9]{10}" inputmode="numeric" placeholder="10-digit mobile" required>
+        </div>
+
+        <div class="form-group">
+            <label>Lead Status</label>
+            <select id="leadStatus" required>
+                <option value="">-- Select Status --</option>
+                <option value="Interested">Interested</option>
+                <option value="Follow-up Required">Follow-up Required</option>
+                <option value="Not Interested">Not Interested</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Feedback</label>
+            <textarea id="feedback" rows="3" placeholder="Remarks are mandatory" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Next Follow up</label>
+            <input type="date" id="followUp" required>
+        </div>
+
+        <button type="submit" id="submitBtn">Submit Lead</button>
+    </form>
+
+    <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px dashed #dadce0;">
+        <a href="report.html" style="color: #70757a; font-size: 13px; text-decoration: none; font-weight: 500;">
+            🔐 HO Login (MIS Access)
+        </a>
+    </div>
+</div>
+
+<script>
+    const sectorData = {
+        "Textiles & Apparel": ["Textiles", "Cloth Shops", "Tailoring", "Footwear", "Gents/Ladies Wear", "Fancy Shops"],
+        "Food, Grocery & FMCG": ["Supermarkets", "Bakeries", "Hotels", "Restaurants", "Tea Shops", "Cool Bars", "Provisions"],
+        "Electronics & Mobiles": ["Mobile Shops", "Electrical Shops", "AC Service", "Computers", "Home Appliances"],
+        "Automotive & Spare Parts": ["Workshops", "Tyre Shops", "Spare Parts", "Motors", "Car/Bike Service", "Batteries"],
+        "Construction & Hardware": ["Hardware", "Paints", "Welding", "Fabrication", "Aluminum", "Plumbing", "Tiles", "Wood"],
+        "Personal Services": ["Saloons/Beauty Parlours", "Studios", "Printing/Xerox", "Travel Agencies", "Laundry"],
+        "Health & Wellness": ["Pharmacies", "Medical Stores", "Ayurveda", "Clinics", "Lab Services"],
+        "Furniture & Home Decor": ["Furniture Shops", "Interior Works", "Curtains", "Mattresses"],
+        "Agriculture & Allied": ["Fertilizer Shops", "Seed Shops", "Pet Shops", "Nursery", "Farms"],
+        "Educational & Stationery": ["Stationery Shops", "Book Stalls", "Tuition Centres"],
+        "Jewellery & Ornaments": ["Gold/Silver Jewellery", "Ornaments"],
+        "Finance & Agency": ["Trading Companies", "Agencies", "Financial Services", "Insurance"],
+        "General Retail Shop": ["Shop", "Store", "Mart"],
+        "Others": ["Others"]
+    };
+
+    const sectorSelect = document.getElementById('sectorSelect');
+    const businessSelect = document.getElementById('businessSelect');
+    const otherGroup = document.getElementById('otherBusinessGroup');
+    const otherInput = document.getElementById('otherBusinessInput');
+    const leadForm = document.getElementById('leadForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    document.getElementById('date').valueAsDate = new Date();
+
+    Object.keys(sectorData).forEach(sector => {
+        let opt = document.createElement('option');
+        opt.value = sector;
+        opt.innerHTML = sector;
+        sectorSelect.appendChild(opt);
+    });
+
+    function updateBusinessOptions() {
+        const selectedSector = sectorSelect.value;
+        businessSelect.innerHTML = '<option value="">-- Select Business --</option>';
+        
+        if (selectedSector === "Others") {
+            otherGroup.classList.remove('hidden');
+            document.getElementById('businessGroup').classList.add('hidden');
+            businessSelect.required = false;
+            otherInput.required = true;
+        } else {
+            otherGroup.classList.add('hidden');
+            document.getElementById('businessGroup').classList.remove('hidden');
+            businessSelect.required = true;
+            otherInput.required = false;
+            
+            if (sectorData[selectedSector]) {
+                sectorData[selectedSector].forEach(biz => {
+                    let opt = document.createElement('option');
+                    opt.value = biz;
+                    opt.innerHTML = biz;
+                    businessSelect.appendChild(opt);
+                });
+            }
+        }
+    }
+
+    leadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (sectorSelect.value === "Others" && !otherInput.value.trim()) {
+            alert("Please specify the Business Type.");
+            otherInput.focus();
+            return;
+        }
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzCSYdiE2ewVzpuIuk8cXoP_Lz810bqZwkh-Cg9VciUFoWClrnsZISOwmQBHqFZu_9l/exec';
+
+        const confirmSubmit = confirm("Are you sure you want to submit? All fields are mandatory.");
+        if (confirmSubmit) {
+            submitBtn.innerHTML = "Submitting Lead... Please Wait";
+            submitBtn.disabled = true;
+
+            fetch(scriptURL, {
+                method: 'POST',
+                // Note: removed 'no-cors' to allow proper JSON communication
+                body: JSON.stringify({
+                    date: document.getElementById('date').value,
+                    branch: document.getElementById('branch').value,
+                    execName: document.getElementById('execName').value,
+                    empCode: document.getElementById('empCode').value,
+                    sector: sectorSelect.value,
+                    business: businessSelect.value,
+                    otherBusiness: otherInput.value,
+                    shopName: document.getElementById('shopName').value,
+                    ownerName: document.getElementById('ownerName').value,
+                    ownerNumber: document.getElementById('ownerPhone').value,
+                    status: document.getElementById('leadStatus').value,
+                    feedback: document.getElementById('feedback').value,
+                    followUp: document.getElementById('followUp').value
+                })
+            })
+            .then(response => {
+                // Now we can check if the server actually saved the data
+                alert("Lead submitted successfully!");
+                leadForm.reset(); 
+                document.getElementById('date').valueAsDate = new Date();
+                updateBusinessOptions();
+            })
+            .catch(error => {
+                console.error('Error!', error.message);
+                alert("Submission failed. Please check your internet or script permissions.");
+            })
+            .finally(() => {
+                submitBtn.innerHTML = "Submit Lead";
+                submitBtn.disabled = false;
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

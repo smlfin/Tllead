@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SML Finance Traders Loan - Daily Insight</title>
+<link rel="stylesheet" href="s1.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --bg: #f0f2f5;
+            --text-main: #202124;
+            --text-light: #5f6368;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        body { 
+            font-family: 'Inter', 'Segoe UI', sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main);
+            margin: 0; 
+            padding: 40px; 
+        }
+
+        .container { 
+            max-width: 1000px; 
+            margin: auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 24px; 
+            box-shadow: var(--shadow); 
+        }
+
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 40px; 
+        }
+
+        .back-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-back {
+            background: #f1f3f4;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-light);
+            transition: 0.3s;
+        }
+
+        .btn-back:hover {
+            background: #e8eaed;
+            color: var(--primary);
+        }
+
+        .date-container {
+            background: #fff;
+            padding: 10px 20px;
+            border-radius: 15px;
+            border: 1.5px solid #eee;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .date-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .date-picker { 
+            border: none; 
+            font-weight: 600; 
+            font-size: 16px; 
+            outline: none; 
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+
+        th { 
+            background-color: #f8f9fa; 
+            color: var(--text-light); 
+            text-align: left; 
+            padding: 15px; 
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td { 
+            padding: 15px; 
+            border-bottom: 1px solid #eee; 
+            font-size: 14px;
+        }
+
+        .count-badge {
+            background: #e8f0fe;
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            display: inline-block;
+        }
+
+        .no-data {
+            display: none;
+            text-align: center;
+            padding: 60px;
+            color: var(--text-light);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        #statusMsg {
+            text-align: center;
+            padding: 20px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="back-nav">
+             <button class="btn-back" onclick="window.location.href='report.html'">←</button>
+             <h2 style="margin:0; font-weight:800; color:var(--primary); letter-spacing:-1px;">Daily Performance Insight</h2>
+        </div>
+        <div class="date-container">
+            <span class="date-label">Insight Date</span>
+            <input type="date" id="targetDate" class="date-picker" onchange="processDailyData()">
+        </div>
+    </div>
+
+    <div id="statusMsg">Fetching global lead data...</div>
+
+    <table id="insightTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>Branch</th>
+                <th>Executive Name (Emp Code)</th>
+                <th style="text-align:center;">No. of Leads</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+    
+    <div id="noDataMsg" class="no-data">No lead records found for the selected date.</div>
+</div>
+
+<script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzCSYdiE2ewVzpuIuk8cXoP_Lz810bqZwkh-Cg9VciUFoWClrnsZISOwmQBHqFZu_9l/exec';
+    let rawData = [];
+
+    window.onload = function() {
+        document.getElementById('targetDate').valueAsDate = new Date();
+        init();
+    };
+
+    async function init() {
+        try {
+            const response = await fetch(SCRIPT_URL + '?action=getData');
+            rawData = await response.json();
+            document.getElementById('statusMsg').style.display = 'none';
+            processDailyData();
+        } catch (e) {
+            document.getElementById('statusMsg').innerHTML = `<span style="color:red;">Error connecting to MIS server.</span>`;
+        }
+    }
+
+    function processDailyData() {
+        const selectedDate = document.getElementById('targetDate').value; 
+        const tbody = document.getElementById('tableBody');
+        const table = document.getElementById('insightTable');
+        const noDataMsg = document.getElementById('noDataMsg');
+        
+        tbody.innerHTML = "";
+
+        const dailyLeads = rawData.filter(d => {
+            const dateStr = d.visitdate || d.date; 
+            if (!dateStr) return false;
+            
+            const parts = dateStr.split("/"); 
+            if (parts.length === 3) {
+                const formattedSheetDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                return formattedSheetDate === selectedDate;
+            }
+            return false;
+        });
+
+        if (dailyLeads.length === 0) {
+            table.style.display = 'none';
+            noDataMsg.style.display = 'block';
+            return;
+        }
+
+        table.style.display = 'table';
+        noDataMsg.style.display = 'none';
+
+        const summary = dailyLeads.reduce((acc, curr) => {
+            const code = (curr.empcode || "N/A").toString().toUpperCase().trim();
+            if (!acc[code]) {
+                acc[code] = {
+                    name: curr.execname || "Unknown",
+                    branch: curr.branch || "Unknown",
+                    count: 0
+                };
+            }
+            acc[code].count++; 
+            return acc;
+        }, {});
+
+        Object.keys(summary).forEach(code => {
+            const row = summary[code];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${row.branch}</strong></td>
+                <td>${row.name} <span style="color:var(--text-light); font-size:12px;">(${code})</span></td>
+                <td style="text-align:center;"><span class="count-badge">${row.count}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+</script>
+</body>
+</html>

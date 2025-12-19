@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SML Finance Traders Loan - Strategic MIS</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div id="loginSection">
+    <h2 style="color:#1a73e8">SML Finance Traders Loan MIS</h2>
+    <input type="text" id="user" placeholder="User ID">
+    <input type="password" id="pass" placeholder="Password">
+    <button onclick="checkLogin()">Enter Dashboard</button>
+</div>
+
+<div id="dash" class="dashboard-container">
+    <div class="header-container">
+        <div>
+            <h2 class="header-title">HO Strategic MIS - Lead Insights</h2>
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="location.reload()">Main Dashboard</button>
+                <button class="tab-btn" onclick="window.location.href='daily.html'">Daily Lead Card</button>
+            </div>
+        </div>
+        <button class="refresh-btn" onclick="location.reload()">Refresh Data</button>
+    </div>
+
+    <div class="filter-bar">
+        <div><label>Month</label><select id="fMonth" onchange="apply()"></select></div>
+        <div><label>Branch</label><select id="fBranch" onchange="apply()"></select></div>
+        <div><label>Employee</label><select id="fEmp" onchange="apply()"></select></div>
+        <div><label>Sector</label><select id="fSector" onchange="apply()"></select></div>
+    </div>
+
+    <div class="tile-grid">
+        <div class="tile" onclick="showLeadPopup('Total')"><small>Total Leads</small><h2 id="tTotal">0</h2></div>
+        <div class="tile border-green" onclick="showLeadPopup('Interested')"><small>Interested</small><h2 id="tInt" class="text-green">0</h2></div>
+        <div class="tile border-yellow" onclick="showLeadPopup('Follow-up')"><small>Follow-up</small><h2 id="tFol" class="text-yellow">0</h2></div>
+        <div class="tile border-red" onclick="showLeadPopup('Not Interested')"><small>Not Interested</small><h2 id="tNot" class="text-red">0</h2></div>
+    </div>
+
+    <div class="chart-grid">
+        <div class="card">
+            <h3>Branch Distribution</h3>
+            <div class="chart-wrapper"><canvas id="cMain"></canvas></div>
+        </div>
+        <div class="card">
+            <h3>Status Funnel</h3>
+            <div class="chart-wrapper"><canvas id="cStatus"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div id="modalOverlay" class="modal-overlay" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="modalTitle">Details</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="download-btn" onclick="downloadCSV()">Download CSV</button>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
