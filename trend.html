@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SML Group - Strategic Trend MIS</title>
+
+<link rel="stylesheet" href="s1.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root { --primary:#1a73e8; --shadow:0 4px 24px rgba(0,0,0,.06); }
+body { background:#f8f9fa; margin:0; font-family:system-ui; }
+.trend-container { padding:30px 40px; }
+
+.trend-controls{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:20px;
+padding:25px;
+background:#fff;
+border-radius:16px;
+margin-bottom:30px;
+box-shadow:var(--shadow);
+}
+
+.filter-group{display:flex;flex-direction:column;gap:6px}
+label{font-size:11px;font-weight:800;text-transform:uppercase}
+select,input{
+padding:12px;
+border:1px solid #e0e0e0;
+border-radius:10px;
+font-weight:600;
+}
+
+.trend-grid{display:grid;grid-template-columns:1fr 1fr;gap:25px}
+.card{
+background:#fff;
+padding:25px;
+border-radius:20px;
+box-shadow:var(--shadow);
+}
+.full-width{grid-column:span 2}
+.chart-box{height:350px}
+
+h3{
+margin:0 0 18px;
+font-size:16px;
+font-weight:800;
+display:flex;
+align-items:center;
+gap:8px;
+}
+h3::before{
+content:'';
+width:4px;
+height:18px;
+background:var(--primary);
+border-radius:2px;
+}
+
+#statusIndicator{
+font-size:11px;
+padding:4px 12px;
+border-radius:20px;
+background:#e8f0fe;
+color:#1a73e8;
+font-weight:700;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header-container">
+<h2>Disbursement Trend MIS</h2>
+<div id="statusIndicator">Syncing…</div>
+</div>
+
+<div class="trend-container">
+
+<div class="trend-controls">
+<div class="filter-group">
+<label>District</label>
+<select id="fDistrict" onchange="syncFilters()"></select>
+</div>
+
+<div class="filter-group">
+<label>Branch</label>
+<select id="fBranch" onchange="processData()"></select>
+</div>
+
+<div class="filter-group">
+<label>Period</label>
+<select id="fPeriod" onchange="processData()">
+<option value="all">All</option>
+<option value="current" selected>MTD</option>
+<option value="10">Latest 10</option>
+<option value="custom">Custom</option>
+</select>
+</div>
+
+<div class="filter-group" id="customDatePanel" style="display:none">
+<label>Date Range</label>
+<div style="display:flex;gap:6px">
+<input type="date" id="startDate" onchange="processData()">
+<input type="date" id="endDate" onchange="processData()">
+</div>
+</div>
+</div>
+
+<div class="trend-grid">
+
+<div class="card full-width">
+<h3>Sector Trend Performance (Click to drill down)</h3>
+<div class="chart-box"><canvas id="sectorChart"></canvas></div>
+</div>
+
+<div class="card">
+<h3>Regional Performance</h3>
+<div class="chart-box"><canvas id="districtChart"></canvas></div>
+</div>
+
+<div class="card">
+<h3>Business Category Mix</h3>
+<div class="chart-box"><canvas id="categoryChart"></canvas></div>
+</div>
+
+</div>
+</div>
+
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTVsWPB-TdY99_DunQrRe4HLDWMsPLFYvbY4n_ZBjbm40TYQXoeln7O-o3o9RcmZAnkP-D3NAl0nA7Y/pub?gid=1843451544&single=true&output=csv";
+
+let db=[], charts={}, branchDistrictMap={}, selectedSector=null;
+
+function parseDateDMY(d){
+if(!d) return null;
+const [dd,mm,yy]=d.split("/");
+return new Date(yy,mm-1,dd);
+}
+
+window.onload=async()=>{
+const res=await fetch(CSV_URL);
+const text=await res.text();
+const rows=text.split(/\r?\n/).filter(r=>r.trim());
+
+rows.slice(1).forEach(r=>{
+const c=r.split(",");
+const date=parseDateDMY(c[0]?.trim());
+const branch=c[1]?.trim();
+const sector=c[2]?.trim();
+const category=c[3]?.trim();
+const mBranch=c[5]?.trim();
+const district=c[6]?.trim();
+
+if(mBranch && district && mBranch!=="Branch1")
+branchDistrictMap[mBranch.toUpperCase()]=district;
+
+if(branch && date)
+db.push({date,branch,sector,category});
+});
+
+initFilters();
+processData();
+statusIndicator.innerText=`Live: ${db.length}`;
+};
+
+function initFilters(){
+populate("fDistrict",[...new Set(Object.values(branchDistrictMap))].sort(),"All Districts");
+populate("fBranch",[],"All Branches");
+}
+
+function syncFilters(){
+selectedSector=null;
+const dist=fDistrict.value;
+populate("fBranch",
+Object.keys(branchDistrictMap).filter(b=>dist==="All"||branchDistrictMap[b]===dist).sort(),
+"All Branches");
+processData();
+}
+
+function populate(id,list,label){
+document.getElementById(id).innerHTML=
+`<option value="All">${label}</option>`+
+list.map(x=>`<option>${x}</option>`).join("");
+}
+
+function processData(){
+customDatePanel.style.display=fPeriod.value==="custom"?"flex":"none";
+
+let data=[...db];
+
+if(fDistrict.value!=="All")
+data=data.filter(d=>branchDistrictMap[d.branch.toUpperCase()]===fDistrict.value);
+
+if(fBranch.value!=="All")
+data=data.filter(d=>d.branch.toUpperCase()===fBranch.value);
+
+data.sort((a,b)=>b.date-a.date);
+
+if(fPeriod.value==="current"){
+const now=new Date();
+data=data.filter(d=>d.date.getMonth()===now.getMonth()&&d.date.getFullYear()===now.getFullYear());
+}
+
+if(fPeriod.value==="10") data=data.slice(0,10);
+
+if(fPeriod.value==="custom"){
+const s=new Date(startDate.value), e=new Date(endDate.value);
+if(!isNaN(s)&&!isNaN(e)){
+e.setHours(23,59,59);
+data=data.filter(d=>d.date>=s&&d.date<=e);
+}
+}
+
+updateCharts(data);
+}
+
+function updateCharts(data){
+const sec={}, dist={}, cat={};
+
+data.forEach(d=>{
+sec[d.sector]=(sec[d.sector]||0)+1;
+const di=branchDistrictMap[d.branch.toUpperCase()];
+if(di) dist[di]=(dist[di]||0)+1;
+
+if(!selectedSector || d.sector===selectedSector)
+cat[d.category]=(cat[d.category]||0)+1;
+});
+
+drawSector("sectorChart",sec);
+draw("districtChart",dist,"#34a853");
+draw("categoryChart",cat,"#fbbc05");
+}
+
+function drawSector(id,obj){
+draw(id,obj,"#1a73e8",true);
+}
+
+function draw(id,obj,color,isSector=false){
+const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]);
+if(charts[id]) charts[id].destroy();
+
+charts[id]=new Chart(document.getElementById(id),{
+type:"bar",
+data:{labels:arr.map(a=>a[0]),
+datasets:[{data:arr.map(a=>a[1]),backgroundColor:color,borderRadius:6}]},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{legend:{display:false}},
+onClick:(evt,elements)=>{
+if(isSector && elements.length){
+selectedSector=arr[elements[0].index][0];
+processData();
+}
+},
+animation:{
+onComplete:function(){
+const ctx=this.ctx;
+ctx.font="bold 12px system-ui";
+ctx.textAlign="center";
+this.data.datasets[0].data.forEach((v,i)=>{
+const bar=this.getDatasetMeta(0).data[i];
+const y=bar.y;
+const inside=y>50;
+ctx.fillStyle=inside?"#fff":"#333";
+ctx.fillText(v,bar.x,inside?y+15:y-6);
+});
+}
+},
+scales:{y:{beginAtZero:true}}
+}
+});
+}
+</script>
+
+</body>
+</html>
