@@ -4,250 +4,245 @@
     <title>Traders Loan Lead System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
         .container { max-width: 650px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         h2 { color: #1a73e8; border-bottom: 2px solid #e8eaed; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        .form-group { margin-bottom: 18px; }
-        label { display: block; font-weight: 600; margin-bottom: 8px; color: #3c4043; }
-        /* Mandatory indicator */
-        label::after { content: " *"; color: #d93025; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        input:focus, select:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
-        .hidden { display: none; }
-        button { background: #1a73e8; color: white; padding: 14px; border: none; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
-        button:hover { background: #1557b0; }
-        button:disabled { background: #9aa0a6; cursor: not-allowed; }
-        .section-title { font-size: 12px; text-transform: uppercase; color: #70757a; margin-top: 25px; margin-bottom: 10px; font-weight: bold; letter-spacing: 1px; border-left: 4px solid #1a73e8; padding-left: 10px; }
+        .section-title { font-size: 11px; text-transform: uppercase; color: #70757a; margin: 25px 0 12px; font-weight: bold; letter-spacing: 1px; border-left: 4px solid #1a73e8; padding-left: 10px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; color: #3c4043; font-size: 14px; }
+        label span { color: #d93025; }
+        input, select, textarea { width: 100%; padding: 11px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+        .hidden { display: none !important; }
+        button#submitBtn { background: #1a73e8; color: white; padding: 14px; border: none; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; transition: background 0.3s; }
+        button#submitBtn:hover { background: #1557b0; }
+        button#submitBtn:disabled { background: #9aa0a6; cursor: not-allowed; }
+        #successMsg { display:none; background:#e6f4ea; border:1px solid #34a853; color:#1e7e34; padding:16px; border-radius:8px; text-align:center; font-weight:bold; margin-top:16px; }
+        #errorMsg   { display:none; background:#fce8e6; border:1px solid #ea4335; color:#c5221f; padding:16px; border-radius:8px; text-align:center; font-weight:bold; margin-top:16px; }
+        .footer-link { text-align:center; margin-top:25px; padding-top:15px; border-top:1px dashed #dadce0; }
+        .footer-link a { color:#70757a; font-size:13px; text-decoration:none; font-weight:500; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h2>Traders Loan Lead Entry</h2>
-    <form id="leadForm">
-        
-        <div class="section-title">Executive & Branch Info</div>
-        <div class="form-group">
-            <label>Date of Visit</label>
-            <input type="date" id="date" required>
-        </div>
 
+    <form id="leadForm" autocomplete="off">
+        <div class="section-title">Executive &amp; Branch Info</div>
         <div class="form-group">
-            <label>Branch</label>
-            <select id="branch" required>
+            <label>Date of Visit <span>*</span></label>
+            <input type="date" id="f_date" required>
+        </div>
+        <div class="form-group">
+            <label>Branch <span>*</span></label>
+            <select id="f_branch" required>
                 <option value="">-- Select Branch --</option>
-                <option value="KUNNAMKULAM">KUNNAMKULAM</option>
-                <option value="PARAVOOR">PARAVOOR</option>
-                <option value="HARIPPAD">HARIPPAD</option>
-                <option value="KATTAPPANA">KATTAPPANA</option>
-                <option value="MATTANCHERY">MATTANCHERY</option>
-                <option value="PATHANAMTHITTA">PATHANAMTHITTA</option>
-                <option value="KOTTAYAM">KOTTAYAM</option>
-                <option value="ALATHUR">ALATHUR</option>
-                <option value="ANGAMALY">ANGAMALY</option>
-                <option value="CHENGANNOOR">CHENGANNOOR</option>
-                <option value="EDAPPALLY">EDAPPALLY</option>
-                <option value="KODUVAYOOR">KODUVAYOOR</option>
-                <option value="MAVELIKKARA">MAVELIKKARA</option>
-                <option value="MUVATTUPUZHA">MUVATTUPUZHA</option>
-                <option value="NEDUMKANDOM">NEDUMKANDOM</option>
-                <option value="NENMARA">NENMARA</option>
-                <option value="THIRUVILAMALAI">THIRUVILAMALAI</option>
-                <option value="KUZHALMANNAM">KUZHALMANNAM</option>
-                <option value="THIRUVALLA">THIRUVALLA</option>
-                <option value="THODUPUZHA">THODUPUZHA</option>
-                <option value="PERUMBAVOOR">PERUMBAVOOR</option>
+                <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option>
+                <option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option>
+                <option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option>
+                <option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option>
+                <option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option>
+                <option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option>
+                <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
             </select>
         </div>
-
         <div class="form-group">
-            <label>Executive Name</label>
-            <input type="text" id="execName" placeholder="Full Name" required>
+            <label>Executive Name <span>*</span></label>
+            <input type="text" id="f_execName" placeholder="Full Name" required>
         </div>
         <div class="form-group">
-            <label>Employee Code</label>
-            <input type="text" id="empCode" placeholder="E-XXXX" required>
+            <label>Employee Code <span>*</span></label>
+            <input type="text" id="f_empCode" placeholder="E-XXXX" required>
         </div>
 
-        <div class="section-title">Sector & Business Details</div>
+        <div class="section-title">Sector &amp; Business Details</div>
         <div class="form-group">
-            <label>Sector</label>
-            <select id="sectorSelect" onchange="updateBusinessOptions()" required>
+            <label>Sector <span>*</span></label>
+            <select id="f_sector" required>
                 <option value="">-- Select Sector --</option>
+                <option>Textiles &amp; Apparel</option>
+                <option>Food, Grocery &amp; FMCG</option>
+                <option>Electronics &amp; Mobiles</option>
+                <option>Automotive &amp; Spare Parts</option>
+                <option>Construction &amp; Hardware</option>
+                <option>Personal Services</option>
+                <option>Health &amp; Wellness</option>
+                <option>Furniture &amp; Home Decor</option>
+                <option>Agriculture &amp; Allied</option>
+                <option>Educational &amp; Stationery</option>
+                <option>Jewellery &amp; Ornaments</option>
+                <option>Finance &amp; Agency</option>
+                <option>General Retail Shop</option>
+                <option>Others</option>
             </select>
         </div>
-
-        <div class="form-group" id="businessGroup">
-            <label>Business Category</label>
-            <select id="businessSelect" required>
+        <div class="form-group" id="bizGroup">
+            <label>Business Category <span>*</span></label>
+            <select id="f_business" required>
                 <option value="">-- Select Sector First --</option>
             </select>
         </div>
-
-        <div class="form-group hidden" id="otherBusinessGroup">
-            <label>Specify Business Type (Others)</label>
-            <input type="text" id="otherBusinessInput" placeholder="Enter business type">
+        <div class="form-group hidden" id="otherGroup">
+            <label>Specify Business Type <span>*</span></label>
+            <input type="text" id="f_otherBusiness" placeholder="Enter business type">
+        </div>
+        <div class="form-group">
+            <label>Shop Name <span>*</span></label>
+            <input type="text" id="f_shopName" placeholder="e.g. Royal Traders" required>
         </div>
 
+        <div class="section-title">Customer Contact &amp; Status</div>
         <div class="form-group">
-            <label>Actual Business Name (Shop Name)</label>
-            <input type="text" id="shopName" placeholder="e.g. Royal Traders" required>
+            <label>Owner Name <span>*</span></label>
+            <input type="text" id="f_ownerName" required>
         </div>
-
-        <div class="section-title">Customer Contact & Status</div>
         <div class="form-group">
-            <label>Owner Name</label>
-            <input type="text" id="ownerName" required>
+            <label>Owner Number <span>*</span></label>
+            <input type="tel" id="f_ownerNumber" inputmode="numeric" pattern="[0-9]{10}" placeholder="10-digit mobile" required>
         </div>
-
         <div class="form-group">
-            <label>Owner Number</label>
-            <input type="tel" id="ownerPhone" pattern="[0-9]{10}" inputmode="numeric" placeholder="10-digit mobile" required>
-        </div>
-
-        <div class="form-group">
-            <label>Lead Status</label>
-            <select id="leadStatus" required>
+            <label>Lead Status <span>*</span></label>
+            <select id="f_status" required>
                 <option value="">-- Select Status --</option>
-                <option value="Interested">Interested</option>
-                <option value="Follow-up Required">Follow-up Required</option>
-                <option value="Not Interested">Not Interested</option>
+                <option>Interested</option>
+                <option>Follow-up Required</option>
+                <option>Not Interested</option>
             </select>
         </div>
-
         <div class="form-group">
-            <label>Feedback</label>
-            <textarea id="feedback" rows="3" placeholder="Remarks are mandatory" required></textarea>
+            <label>Feedback <span>*</span></label>
+            <textarea id="f_feedback" rows="3" placeholder="Remarks are mandatory" required></textarea>
         </div>
-
         <div class="form-group">
-            <label>Next Follow up</label>
-            <input type="date" id="followUp" required>
+            <label>Next Follow Up <span>*</span></label>
+            <input type="date" id="f_followUp" required>
         </div>
 
         <button type="submit" id="submitBtn">Submit Lead</button>
     </form>
 
-    <div style="text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px dashed #dadce0;">
-        <a href="report.html" style="color: #70757a; font-size: 13px; text-decoration: none; font-weight: 500;">
-            🔐 HO Login (MIS Access)
-        </a>
+    <div id="successMsg">✅ Lead submitted successfully!</div>
+    <div id="errorMsg">❌ Submission failed. Please try again.</div>
+
+    <div class="footer-link">
+        <a href="report.html">🔐 HO Login (MIS Access)</a>
     </div>
 </div>
 
 <script>
-    const sectorData = {
-        "Textiles & Apparel": ["Textiles", "Cloth Shops", "Tailoring", "Footwear", "Gents/Ladies Wear", "Fancy Shops"],
-        "Food, Grocery & FMCG": ["Supermarkets", "Bakeries", "Hotels", "Restaurants", "Tea Shops", "Cool Bars", "Provisions"],
-        "Electronics & Mobiles": ["Mobile Shops", "Electrical Shops", "AC Service", "Computers", "Home Appliances"],
-        "Automotive & Spare Parts": ["Workshops", "Tyre Shops", "Spare Parts", "Motors", "Car/Bike Service", "Batteries"],
-        "Construction & Hardware": ["Hardware", "Paints", "Welding", "Fabrication", "Aluminum", "Plumbing", "Tiles", "Wood"],
-        "Personal Services": ["Saloons/Beauty Parlours", "Studios", "Printing/Xerox", "Travel Agencies", "Laundry"],
-        "Health & Wellness": ["Pharmacies", "Medical Stores", "Ayurveda", "Clinics", "Lab Services"],
-        "Furniture & Home Decor": ["Furniture Shops", "Interior Works", "Curtains", "Mattresses"],
-        "Agriculture & Allied": ["Fertilizer Shops", "Seed Shops", "Pet Shops", "Nursery", "Farms"],
-        "Educational & Stationery": ["Stationery Shops", "Book Stalls", "Tuition Centres"],
-        "Jewellery & Ornaments": ["Gold/Silver Jewellery", "Ornaments"],
-        "Finance & Agency": ["Trading Companies", "Agencies", "Financial Services", "Insurance"],
-        "General Retail Shop": ["Shop", "Store", "Mart"],
-        "Others": ["Others"]
-    };
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
 
-    const sectorSelect = document.getElementById('sectorSelect');
-    const businessSelect = document.getElementById('businessSelect');
-    const otherGroup = document.getElementById('otherBusinessGroup');
-    const otherInput = document.getElementById('otherBusinessInput');
-    const leadForm = document.getElementById('leadForm');
-    const submitBtn = document.getElementById('submitBtn');
+const sectorMap = {
+    "Textiles & Apparel":       ["Textiles","Cloth Shops","Tailoring","Footwear","Gents/Ladies Wear","Fancy Shops"],
+    "Food, Grocery & FMCG":     ["Supermarkets","Bakeries","Hotels","Restaurants","Tea Shops","Cool Bars","Provisions"],
+    "Electronics & Mobiles":    ["Mobile Shops","Electrical Shops","AC Service","Computers","Home Appliances"],
+    "Automotive & Spare Parts": ["Workshops","Tyre Shops","Spare Parts","Motors","Car/Bike Service","Batteries"],
+    "Construction & Hardware":  ["Hardware","Paints","Welding","Fabrication","Aluminum","Plumbing","Tiles","Wood"],
+    "Personal Services":        ["Saloons/Beauty Parlours","Studios","Printing/Xerox","Travel Agencies","Laundry"],
+    "Health & Wellness":        ["Pharmacies","Medical Stores","Ayurveda","Clinics","Lab Services"],
+    "Furniture & Home Decor":   ["Furniture Shops","Interior Works","Curtains","Mattresses"],
+    "Agriculture & Allied":     ["Fertilizer Shops","Seed Shops","Pet Shops","Nursery","Farms"],
+    "Educational & Stationery": ["Stationery Shops","Book Stalls","Tuition Centres"],
+    "Jewellery & Ornaments":    ["Gold/Silver Jewellery","Ornaments"],
+    "Finance & Agency":         ["Trading Companies","Agencies","Financial Services","Insurance"],
+    "General Retail Shop":      ["Shop","Store","Mart"],
+    "Others":                   []
+};
 
-    document.getElementById('date').valueAsDate = new Date();
+const form       = document.getElementById('leadForm');
+const submitBtn  = document.getElementById('submitBtn');
+const sectorSel  = document.getElementById('f_sector');
+const bizSel     = document.getElementById('f_business');
+const bizGroup   = document.getElementById('bizGroup');
+const otherGroup = document.getElementById('otherGroup');
+const otherInput = document.getElementById('f_otherBusiness');
+const successMsg = document.getElementById('successMsg');
+const errorMsg   = document.getElementById('errorMsg');
 
-    Object.keys(sectorData).forEach(sector => {
-        let opt = document.createElement('option');
-        opt.value = sector;
-        opt.innerHTML = sector;
-        sectorSelect.appendChild(opt);
-    });
+document.getElementById('f_date').valueAsDate = new Date();
 
-    function updateBusinessOptions() {
-        const selectedSector = sectorSelect.value;
-        businessSelect.innerHTML = '<option value="">-- Select Business --</option>';
-        
-        if (selectedSector === "Others") {
-            otherGroup.classList.remove('hidden');
-            document.getElementById('businessGroup').classList.add('hidden');
-            businessSelect.required = false;
-            otherInput.required = true;
-        } else {
-            otherGroup.classList.add('hidden');
-            document.getElementById('businessGroup').classList.remove('hidden');
-            businessSelect.required = true;
-            otherInput.required = false;
-            
-            if (sectorData[selectedSector]) {
-                sectorData[selectedSector].forEach(biz => {
-                    let opt = document.createElement('option');
-                    opt.value = biz;
-                    opt.innerHTML = biz;
-                    businessSelect.appendChild(opt);
-                });
-            }
-        }
+sectorSel.addEventListener('change', function () {
+    const sec = this.value;
+    bizSel.innerHTML = '<option value="">-- Select Business --</option>';
+    successMsg.style.display = 'none';
+    errorMsg.style.display   = 'none';
+    if (sec === 'Others') {
+        bizGroup.classList.add('hidden');
+        otherGroup.classList.remove('hidden');
+        bizSel.required     = false;
+        otherInput.required = true;
+    } else {
+        bizGroup.classList.remove('hidden');
+        otherGroup.classList.add('hidden');
+        bizSel.required     = true;
+        otherInput.required = false;
+        (sectorMap[sec] || []).forEach(function(b) {
+            var o = document.createElement('option');
+            o.value = o.textContent = b;
+            bizSel.appendChild(o);
+        });
     }
+});
 
-    leadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    successMsg.style.display = 'none';
+    errorMsg.style.display   = 'none';
 
-        if (sectorSelect.value === "Others" && !otherInput.value.trim()) {
-            alert("Please specify the Business Type.");
-            otherInput.focus();
-            return;
-        }
+    if (sectorSel.value === 'Others' && !otherInput.value.trim()) {
+        alert('Please specify the Business Type.');
+        otherInput.focus();
+        return;
+    }
+    if (!confirm('Submit this lead?')) return;
 
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbzCSYdiE2ewVzpuIuk8cXoP_Lz810bqZwkh-Cg9VciUFoWClrnsZISOwmQBHqFZu_9l/exec';
+    submitBtn.textContent = '⏳ Submitting...';
+    submitBtn.disabled    = true;
 
-        const confirmSubmit = confirm("Are you sure you want to submit? All fields are mandatory.");
-        if (confirmSubmit) {
-            submitBtn.innerHTML = "Submitting Lead... Please Wait";
-            submitBtn.disabled = true;
-
-            fetch(scriptURL, {
-                method: 'POST',
-                // Note: removed 'no-cors' to allow proper JSON communication
-                body: JSON.stringify({
-                    date: document.getElementById('date').value,
-                    branch: document.getElementById('branch').value,
-                    execName: document.getElementById('execName').value,
-                    empCode: document.getElementById('empCode').value,
-                    sector: sectorSelect.value,
-                    business: businessSelect.value,
-                    otherBusiness: otherInput.value,
-                    shopName: document.getElementById('shopName').value,
-                    ownerName: document.getElementById('ownerName').value,
-                    ownerNumber: document.getElementById('ownerPhone').value,
-                    status: document.getElementById('leadStatus').value,
-                    feedback: document.getElementById('feedback').value,
-                    followUp: document.getElementById('followUp').value
-                })
-            })
-            .then(response => {
-                // Now we can check if the server actually saved the data
-                alert("Lead submitted successfully!");
-                leadForm.reset(); 
-                document.getElementById('date').valueAsDate = new Date();
-                updateBusinessOptions();
-            })
-            .catch(error => {
-                console.error('Error!', error.message);
-                alert("Submission failed. Please check your internet or script permissions.");
-            })
-            .finally(() => {
-                submitBtn.innerHTML = "Submit Lead";
-                submitBtn.disabled = false;
-            });
-        }
+    var params = new URLSearchParams({
+        action:        'submit',
+        date:          document.getElementById('f_date').value,
+        branch:        document.getElementById('f_branch').value,
+        execName:      document.getElementById('f_execName').value,
+        empCode:       document.getElementById('f_empCode').value,
+        sector:        sectorSel.value,
+        business:      sectorSel.value === 'Others' ? '' : bizSel.value,
+        otherBusiness: otherInput.value.trim(),
+        shopName:      document.getElementById('f_shopName').value,
+        ownerName:     document.getElementById('f_ownerName').value,
+        ownerNumber:   document.getElementById('f_ownerNumber').value,
+        status:        document.getElementById('f_status').value,
+        feedback:      document.getElementById('f_feedback').value,
+        followUp:      document.getElementById('f_followUp').value
     });
-</script>
 
+    // fetch with no-cors follows redirects and delivers the request to GAS
+    fetch(GAS_URL + '?' + params.toString(), {
+        method:   'GET',
+        mode:     'no-cors',
+        redirect: 'follow'
+    })
+    .then(function() {
+        successMsg.style.display = 'block';
+        form.reset();
+        document.getElementById('f_date').valueAsDate = new Date();
+        bizSel.innerHTML = '<option value="">-- Select Sector First --</option>';
+        bizGroup.classList.remove('hidden');
+        otherGroup.classList.add('hidden');
+        bizSel.required     = true;
+        otherInput.required = false;
+        submitBtn.textContent = 'Submit Lead';
+        submitBtn.disabled    = false;
+        window.scrollTo(0, 0);
+    })
+    .catch(function(err) {
+        errorMsg.textContent = '❌ Error: ' + err.message;
+        errorMsg.style.display = 'block';
+        submitBtn.textContent = 'Submit Lead';
+        submitBtn.disabled    = false;
+    });
+});
+</script>
 </body>
 </html>
