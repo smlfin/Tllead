@@ -1,39 +1,166 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Traders Loan Lead System</title>
+    <title>SML Group — Field Operations</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 650px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { color: #1a73e8; border-bottom: 2px solid #e8eaed; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        .section-title { font-size: 11px; text-transform: uppercase; color: #70757a; margin: 25px 0 12px; font-weight: bold; letter-spacing: 1px; border-left: 4px solid #1a73e8; padding-left: 10px; }
-        .form-group { margin-bottom: 16px; }
-        label { display: block; font-weight: 600; margin-bottom: 6px; color: #3c4043; font-size: 14px; }
-        label span { color: #d93025; }
-        input, select, textarea { width: 100%; padding: 11px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 14px; font-family: inherit; }
-        input:focus, select:focus, textarea:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
-        .hidden { display: none !important; }
-        button#submitBtn { background: #1a73e8; color: white; padding: 14px; border: none; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; transition: background 0.3s; }
-        button#submitBtn:hover { background: #1557b0; }
-        button#submitBtn:disabled { background: #9aa0a6; cursor: not-allowed; }
-        #successMsg { display:none; background:#e6f4ea; border:1px solid #34a853; color:#1e7e34; padding:16px; border-radius:8px; text-align:center; font-weight:bold; margin-top:16px; }
-        #errorMsg   { display:none; background:#fce8e6; border:1px solid #ea4335; color:#c5221f; padding:16px; border-radius:8px; text-align:center; font-weight:bold; margin-top:16px; }
-        .footer-link { text-align:center; margin-top:25px; padding-top:15px; border-top:1px dashed #dadce0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; }
+
+        /* ── TAB BAR ── */
+        .tab-bar { display:flex; background:#1a73e8; box-shadow:0 2px 8px rgba(0,0,0,0.18); position:sticky; top:0; z-index:100; overflow-x:auto; }
+        .tab-btn { flex:1; min-width:110px; padding:14px 8px; border:none; background:transparent; color:rgba(255,255,255,0.7); font-size:13px; font-weight:600; cursor:pointer; border-bottom:3px solid transparent; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
+        .tab-btn.active { color:#fff; border-bottom:3px solid #fff; background:rgba(255,255,255,0.1); }
+        .tab-btn:hover:not(.active) { background:rgba(255,255,255,0.08); color:#fff; }
+
+        /* ── PANELS ── */
+        .tab-panel { display:none; padding:16px; }
+        .tab-panel.active { display:block; }
+
+        /* ── CARD ── */
+        .container { max-width:650px; margin:auto; background:white; padding:22px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
+        .container-wide { max-width:100%; margin:auto; background:white; padding:22px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color:#1a73e8; border-bottom:2px solid #e8eaed; padding-bottom:10px; margin-bottom:18px; text-align:center; font-size:18px; }
+        .section-title { font-size:11px; text-transform:uppercase; color:#70757a; margin:20px 0 10px; font-weight:bold; letter-spacing:1px; border-left:4px solid #1a73e8; padding-left:10px; }
+        .form-group { margin-bottom:14px; }
+        label { display:block; font-weight:600; margin-bottom:5px; color:#3c4043; font-size:14px; }
+        label span { color:#d93025; }
+        input, select, textarea { width:100%; padding:11px 12px; border:1px solid #dadce0; border-radius:6px; font-size:14px; font-family:inherit; }
+        input:focus, select:focus, textarea:focus { border-color:#1a73e8; outline:none; box-shadow:0 0 0 2px rgba(26,115,232,0.2); }
+        .hidden { display:none !important; }
+        button.submit-btn { background:#1a73e8; color:white; padding:13px; border:none; width:100%; border-radius:6px; cursor:pointer; font-size:15px; font-weight:bold; margin-top:10px; transition:background 0.3s; font-family:inherit; }
+        button.submit-btn:hover { background:#1557b0; }
+        button.submit-btn:disabled { background:#9aa0a6; cursor:not-allowed; }
+        .successMsg { display:none; background:#e6f4ea; border:1px solid #34a853; color:#1e7e34; padding:14px; border-radius:8px; text-align:center; font-weight:bold; margin-top:14px; }
+        .errorMsg   { display:none; background:#fce8e6; border:1px solid #ea4335; color:#c5221f; padding:14px; border-radius:8px; text-align:center; font-weight:bold; margin-top:14px; }
+        .footer-link { text-align:center; margin-top:22px; padding-top:14px; border-top:1px dashed #dadce0; }
         .footer-link a { color:#70757a; font-size:13px; text-decoration:none; font-weight:500; }
+        .field-hint { font-size:11px; color:#70757a; margin-top:3px; }
+
+        /* ── SUB-TABS ── */
+        .sub-tab-bar { display:flex; margin-bottom:18px; border-bottom:2px solid #e8eaed; overflow-x:auto; }
+        .sub-tab-btn { padding:10px 18px; border:none; background:transparent; color:#70757a; font-size:13px; font-weight:600; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.2s; font-family:inherit; white-space:nowrap; border-radius:6px 6px 0 0; }
+        .sub-tab-btn.active { color:#1a73e8; border-bottom:3px solid #1a73e8; }
+        .sub-tab-btn:hover:not(.active) { background:#f0f2f5; }
+        .sub-panel { display:none; }
+        .sub-panel.active { display:block; }
+
+        /* ── LOGIN ANIMATION ── */
+        .login-box { max-width:400px; margin:0 auto; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes fadeSlideIn { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes successPop { 0%{transform:scale(0.4);opacity:0;}70%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;} }
+
+        .login-form-wrap { transition:opacity 0.25s; }
+        .login-form-wrap.fading { opacity:0; pointer-events:none; }
+
+        .login-anim-wrap { display:none; flex-direction:column; align-items:center; padding:36px 0; gap:14px; animation:fadeSlideIn 0.3s ease; }
+        .login-anim-wrap.active { display:flex; }
+
+        .spinner-ring { width:50px; height:50px; border:4px solid #e8eaed; border-top:4px solid #1a73e8; border-radius:50%; animation:spin 0.75s linear infinite; }
+        .spinner-text { color:#70757a; font-size:14px; font-weight:500; }
+
+        .success-circle { width:58px; height:58px; background:#34a853; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; color:white; animation:successPop 0.4s ease forwards; }
+
+        /* ── REPORT COMMON ── */
+        .report-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+        .branch-badge { display:inline-block; background:#e8f0fe; color:#1a73e8; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:700; }
+        .logout-btn { background:none; border:1px solid #dadce0; color:#70757a; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px; font-family:inherit; }
+        .logout-btn:hover { background:#f0f2f5; }
+        .loading-spinner { text-align:center; padding:40px; color:#70757a; font-size:14px; }
+
+        /* ── METRIC CARDS (mobile 2-col) ── */
+        .metric-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
+        @media(min-width:500px){ .metric-cards { grid-template-columns:repeat(3,1fr); } }
+        .metric-card { background:#f8f9fa; border:1px solid #e8eaed; border-radius:8px; padding:11px 12px; }
+        .mc-label { font-size:10px; color:#70757a; text-transform:uppercase; letter-spacing:0.5px; font-weight:600; line-height:1.4; }
+        .mc-value { font-size:17px; font-weight:700; color:#1a73e8; margin:4px 0 2px; word-break:break-all; }
+        .mc-sub   { font-size:11px; color:#70757a; }
+
+        /* ── PROGRESS CARD ── */
+        .tva-card { background:#f8f9fa; border:1px solid #e8eaed; border-radius:8px; padding:14px; margin-bottom:10px; }
+        .tva-card .tva-title { font-weight:700; color:#3c4043; margin-bottom:10px; font-size:13px; }
+        .tva-row { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
+        .tva-key { color:#70757a; }
+        .tva-val { font-weight:600; }
+        .progress-wrap { background:#e8eaed; border-radius:4px; height:7px; margin-top:10px; overflow:hidden; }
+        .progress-bar  { height:100%; border-radius:4px; transition:width 0.7s ease; }
+        .bar-good { background:#34a853; } .bar-warn { background:#f9ab00; } .bar-bad { background:#ea4335; }
+
+        /* ── SCROLLABLE TABLES ── */
+        .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid #e8eaed; border-radius:8px; margin-top:10px; }
+        table.rt { width:100%; border-collapse:collapse; font-size:12px; }
+        table.rt th { background:#1a73e8; color:white; padding:9px 10px; text-align:center; font-weight:600; white-space:nowrap; }
+        table.rt td { padding:8px 10px; border-bottom:1px solid #e8eaed; white-space:nowrap; text-align:center; }
+        table.rt tr:nth-child(even) td { background:#f8f9fa; }
+        table.rt tr.tr-total td { background:#e8f0fe; font-weight:700; }
+        table.rt td:first-child { text-align:left; font-weight:600; }
+
+        /* colors */
+        .pct-good { color:#34a853; font-weight:700; }
+        .pct-warn { color:#f9ab00; font-weight:700; }
+        .pct-bad  { color:#ea4335; font-weight:700; }
+        .sf-pos   { color:#34a853; font-weight:600; }
+        .sf-neg   { color:#ea4335; font-weight:600; }
+
+        /* ── ADMIN MIS TABLE ── */
+        .mis-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:14px; }
+        table.mis { width:100%; border-collapse:collapse; font-size:12px; min-width:900px; }
+        table.mis .mis-title-row td { background:#1e5c3a; color:white; font-size:15px; font-weight:700; text-align:center; padding:10px; }
+        table.mis .mis-date-row td  { background:#1e5c3a; color:white; font-size:15px; font-weight:700; text-align:right; padding:10px; }
+        table.mis .mis-header th   { background:#2e7d32; color:white; padding:9px 8px; font-weight:700; white-space:nowrap; text-align:center; border:1px solid #1e5c3a; font-size:11px; }
+        table.mis .mis-header th:first-child { text-align:left; }
+        table.mis tbody tr td { padding:8px 8px; border:1px solid #e0e0e0; text-align:center; white-space:nowrap; font-size:12px; }
+        table.mis tbody tr td:first-child { text-align:left; font-weight:600; background:#f9f9f9; }
+        table.mis tbody tr:nth-child(even) td { background:#f5fdf6; }
+        table.mis tbody tr:nth-child(even) td:first-child { background:#f0f8f0; }
+        table.mis .mis-total td { background:#e8f5e9; font-weight:700; border-top:2px solid #2e7d32; }
+        table.mis .mis-total td:first-child { background:#e8f5e9; }
+        .mis-achieved { background:#fff8e1 !important; }
+        .mis-sf-neg { color:#c62828; font-weight:700; }
+        .mis-sf-pos { color:#2e7d32; font-weight:700; }
+        .mis-pct-good { color:#2e7d32; font-weight:700; }
+        .mis-pct-warn { color:#e65100; font-weight:700; }
+        .mis-pct-bad  { color:#c62828; font-weight:700; }
+
+        /* ── ADMIN BRANCH DRILLDOWN ── */
+        .back-btn { display:inline-flex; align-items:center; gap:6px; background:none; border:1px solid #dadce0; color:#3c4043; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:13px; font-family:inherit; margin-bottom:14px; }
+        .back-btn:hover { background:#f0f2f5; }
+        .branch-card { background:#f8f9fa; border:1px solid #e8eaed; border-radius:8px; padding:13px; margin-bottom:10px; cursor:pointer; transition:box-shadow 0.2s,border-color 0.2s; }
+        .branch-card:hover { box-shadow:0 2px 10px rgba(26,115,232,0.15); border-color:#1a73e8; }
+        .bc-name { font-weight:700; color:#1a73e8; font-size:15px; }
+        .bc-chips { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+        .chip { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; }
+        .chip-blue { background:#e8f0fe; color:#1557b0; }
+        .chip-warn { background:#fff8e1; color:#b06500; }
+        .chip-bad  { background:#fce8e6; color:#c5221f; }
+        .chip-green{ background:#e6f4ea; color:#1e7e34; }
+
+        /* ── MIS HEADER ── */
+        .mis-title-area { display:flex; justify-content:space-between; align-items:center; background:#1e5c3a; color:white; padding:12px 16px; border-radius:8px 8px 0 0; flex-wrap:wrap; gap:8px; margin-top:14px; }
+        .mis-title-area .mis-main-title { font-size:16px; font-weight:700; }
+        .mis-title-area .mis-date { font-size:15px; font-weight:700; }
+        .mis-title-area .mis-right-label { font-size:12px; font-weight:600; background:#2e7d32; padding:4px 10px; border-radius:4px; }
     </style>
 </head>
 <body>
+
+<!-- ═══════════ MAIN TAB BAR ═══════════ -->
+<div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('leads')">📋 Lead Entry</button>
+    <button class="tab-btn" onclick="switchTab('commitment')">🎯 Commitment</button>
+    <button class="tab-btn" onclick="switchTab('admin')">🛡️ Admin MIS</button>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 1 — TRADERS LOAN LEAD ENTRY
+═══════════════════════════════════════ -->
+<div id="tab-leads" class="tab-panel active">
 <div class="container">
     <h2>Traders Loan Lead Entry</h2>
-
     <form id="leadForm" autocomplete="off">
         <div class="section-title">Executive &amp; Branch Info</div>
-        <div class="form-group">
-            <label>Date of Visit <span>*</span></label>
-            <input type="date" id="f_date" required>
-        </div>
+        <div class="form-group"><label>Date of Visit <span>*</span></label><input type="date" id="f_date" required></div>
         <div class="form-group">
             <label>Branch <span>*</span></label>
             <select id="f_branch" required>
@@ -47,92 +174,205 @@
                 <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
             </select>
         </div>
-        <div class="form-group">
-            <label>Executive Name <span>*</span></label>
-            <input type="text" id="f_execName" placeholder="Full Name" required>
-        </div>
-        <div class="form-group">
-            <label>Employee Code <span>*</span></label>
-            <input type="text" id="f_empCode" placeholder="E-XXXX" required>
-        </div>
+        <div class="form-group"><label>Executive Name <span>*</span></label><input type="text" id="f_execName" placeholder="Full Name" required></div>
+        <div class="form-group"><label>Employee Code <span>*</span></label><input type="text" id="f_empCode" placeholder="E-XXXX" required></div>
 
         <div class="section-title">Sector &amp; Business Details</div>
         <div class="form-group">
             <label>Sector <span>*</span></label>
             <select id="f_sector" required>
                 <option value="">-- Select Sector --</option>
-                <option>Textiles &amp; Apparel</option>
-                <option>Food, Grocery &amp; FMCG</option>
-                <option>Electronics &amp; Mobiles</option>
-                <option>Automotive &amp; Spare Parts</option>
-                <option>Construction &amp; Hardware</option>
-                <option>Personal Services</option>
-                <option>Health &amp; Wellness</option>
-                <option>Furniture &amp; Home Decor</option>
-                <option>Agriculture &amp; Allied</option>
-                <option>Educational &amp; Stationery</option>
-                <option>Jewellery &amp; Ornaments</option>
-                <option>Finance &amp; Agency</option>
-                <option>General Retail Shop</option>
-                <option>Others</option>
+                <option>Textiles &amp; Apparel</option><option>Food, Grocery &amp; FMCG</option>
+                <option>Electronics &amp; Mobiles</option><option>Automotive &amp; Spare Parts</option>
+                <option>Construction &amp; Hardware</option><option>Personal Services</option>
+                <option>Health &amp; Wellness</option><option>Furniture &amp; Home Decor</option>
+                <option>Agriculture &amp; Allied</option><option>Educational &amp; Stationery</option>
+                <option>Jewellery &amp; Ornaments</option><option>Finance &amp; Agency</option>
+                <option>General Retail Shop</option><option>Others</option>
             </select>
         </div>
-        <div class="form-group" id="bizGroup">
-            <label>Business Category <span>*</span></label>
-            <select id="f_business" required>
-                <option value="">-- Select Sector First --</option>
-            </select>
-        </div>
-        <div class="form-group hidden" id="otherGroup">
-            <label>Specify Business Type <span>*</span></label>
-            <input type="text" id="f_otherBusiness" placeholder="Enter business type">
-        </div>
-        <div class="form-group">
-            <label>Shop Name <span>*</span></label>
-            <input type="text" id="f_shopName" placeholder="e.g. Royal Traders" required>
-        </div>
+        <div class="form-group" id="bizGroup"><label>Business Category <span>*</span></label><select id="f_business" required><option value="">-- Select Sector First --</option></select></div>
+        <div class="form-group hidden" id="otherGroup"><label>Specify Business Type <span>*</span></label><input type="text" id="f_otherBusiness" placeholder="Enter business type"></div>
+        <div class="form-group"><label>Shop Name <span>*</span></label><input type="text" id="f_shopName" placeholder="e.g. Royal Traders" required></div>
 
         <div class="section-title">Customer Contact &amp; Status</div>
-        <div class="form-group">
-            <label>Owner Name <span>*</span></label>
-            <input type="text" id="f_ownerName" required>
-        </div>
-        <div class="form-group">
-            <label>Owner Number <span>*</span></label>
-            <input type="tel" id="f_ownerNumber" inputmode="numeric" pattern="[0-9]{10}" placeholder="10-digit mobile" required>
-        </div>
+        <div class="form-group"><label>Owner Name <span>*</span></label><input type="text" id="f_ownerName" required></div>
+        <div class="form-group"><label>Owner Number <span>*</span></label><input type="tel" id="f_ownerNumber" inputmode="numeric" pattern="[0-9]{10}" placeholder="10-digit mobile" required></div>
         <div class="form-group">
             <label>Lead Status <span>*</span></label>
             <select id="f_status" required>
                 <option value="">-- Select Status --</option>
-                <option>Interested</option>
-                <option>Follow-up Required</option>
-                <option>Not Interested</option>
+                <option>Interested</option><option>Follow-up Required</option><option>Not Interested</option>
             </select>
         </div>
-        <div class="form-group">
-            <label>Feedback <span>*</span></label>
-            <textarea id="f_feedback" rows="3" placeholder="Remarks are mandatory" required></textarea>
-        </div>
-        <div class="form-group">
-            <label>Next Follow Up <span>*</span></label>
-            <input type="date" id="f_followUp" required>
-        </div>
-
-        <button type="submit" id="submitBtn">Submit Lead</button>
+        <div class="form-group"><label>Feedback <span>*</span></label><textarea id="f_feedback" rows="3" placeholder="Remarks are mandatory" required></textarea></div>
+        <div class="form-group"><label>Next Follow Up <span>*</span></label><input type="date" id="f_followUp" required></div>
+        <button type="submit" class="submit-btn" id="submitBtn">Submit Lead</button>
     </form>
+    <div id="successMsg" class="successMsg">✅ Lead submitted successfully!</div>
+    <div id="errorMsg" class="errorMsg">❌ Submission failed. Please try again.</div>
+    <div class="footer-link"><a href="report.html">🔐 HO Login (MIS Access)</a></div>
+</div>
+</div>
 
-    <div id="successMsg">✅ Lead submitted successfully!</div>
-    <div id="errorMsg">❌ Submission failed. Please try again.</div>
-
-    <div class="footer-link">
-        <a href="report.html">🔐 HO Login (MIS Access)</a>
+<!-- ═══════════════════════════════════════
+     TAB 2 — COMMITMENT
+═══════════════════════════════════════ -->
+<div id="tab-commitment" class="tab-panel">
+<div class="container">
+    <h2>🎯 Commitment</h2>
+    <div class="sub-tab-bar">
+        <button class="sub-tab-btn active" onclick="switchSubTab('entry')">✏️ Entry</button>
+        <button class="sub-tab-btn" onclick="switchSubTab('report')">📊 Branch Report</button>
     </div>
+
+    <!-- ENTRY -->
+    <div id="sub-entry" class="sub-panel active">
+        <form id="commitForm" autocomplete="off">
+            <div class="section-title">Branch &amp; Date</div>
+            <div class="form-group"><label>Date <span>*</span></label><input type="date" id="c_date" required></div>
+            <div class="form-group">
+                <label>Branch <span>*</span></label>
+                <select id="c_branch" required>
+                    <option value="">-- Select Branch --</option>
+                    <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option>
+                    <option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option>
+                    <option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option>
+                    <option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option>
+                    <option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option>
+                    <option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option>
+                    <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
+                </select>
+            </div>
+            <div class="section-title">Customer Metrics</div>
+            <div class="form-group"><label>Fresh Customer Count <span>*</span></label><input type="number" id="c_freshCount" min="0" placeholder="0" required></div>
+            <div class="section-title">Disbursement</div>
+            <div class="form-group"><label>Disbursement Amount (₹) <span>*</span></label><input type="number" id="c_disbAmount" min="0" placeholder="0.00" step="0.01" required><div class="field-hint">Enter in Rupees</div></div>
+            <div class="form-group"><label>Disbursement Count <span>*</span></label><input type="number" id="c_disbCount" min="0" placeholder="0" required></div>
+            <div class="section-title">Pipeline</div>
+            <div class="form-group"><label>Pipeline Case Amount (₹) <span>*</span></label><input type="number" id="c_pipelineAmount" min="0" placeholder="0.00" step="0.01" required></div>
+            <div class="form-group"><label>Proposed Amount (₹) <span>*</span></label><input type="number" id="c_proposedAmount" min="0" placeholder="0.00" step="0.01" required></div>
+            <div class="section-title">Approval Status</div>
+            <div class="form-group"><label>Approval Pending <span>*</span></label><input type="number" id="c_approvalPending" min="0" placeholder="0" required></div>
+            <div class="form-group"><label>Approved Cases <span>*</span></label><input type="number" id="c_approvedCases" min="0" placeholder="0" required></div>
+            <div class="section-title">CIBIL</div>
+            <div class="form-group"><label>Positive CIBIL Balance Count <span>*</span></label><input type="number" id="c_cibilCount" min="0" placeholder="0" required></div>
+            <div class="form-group"><label>Positive CIBIL Balance Amount (₹) <span>*</span></label><input type="number" id="c_cibilAmount" min="0" placeholder="0.00" step="0.01" required></div>
+            <button type="submit" class="submit-btn" id="commitSubmitBtn">Submit Commitment Data</button>
+        </form>
+        <div id="commitSuccessMsg" class="successMsg">✅ Commitment data submitted successfully!</div>
+        <div id="commitErrorMsg" class="errorMsg"></div>
+    </div>
+
+    <!-- BRANCH REPORT -->
+    <div id="sub-report" class="sub-panel">
+        <!-- Login -->
+        <div id="rpt-login">
+            <div class="login-box">
+                <div class="section-title">Branch Login</div>
+                <div class="login-form-wrap" id="rpt-login-form">
+                    <div class="form-group">
+                        <label>Branch</label>
+                        <select id="r_branch">
+                            <option value="">-- Select Your Branch --</option>
+                            <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option>
+                            <option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option>
+                            <option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option>
+                            <option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option>
+                            <option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option>
+                            <option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option>
+                            <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Password</label><input type="password" id="r_password" placeholder="Enter branch password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+                    <button class="submit-btn" onclick="doLogin()">🔐 View My Report</button>
+                    <div id="loginErr" class="errorMsg"></div>
+                </div>
+                <div class="login-anim-wrap" id="rpt-spinner"><div class="spinner-ring"></div><div class="spinner-text">Verifying credentials…</div></div>
+                <div class="login-anim-wrap" id="rpt-success"><div class="success-circle">✓</div><div class="spinner-text">Verified! Loading report…</div></div>
+            </div>
+        </div>
+        <!-- Report -->
+        <div id="rpt-data" style="display:none">
+            <div class="report-header">
+                <span id="rpt-badge" class="branch-badge"></span>
+                <button class="logout-btn" onclick="doLogout()">Logout</button>
+            </div>
+            <div id="rpt-content"><div class="loading-spinner">⏳ Loading…</div></div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 3 — ADMIN MIS
+═══════════════════════════════════════ -->
+<div id="tab-admin" class="tab-panel">
+<div class="container-wide">
+    <h2>🛡️ Admin MIS Report</h2>
+
+    <!-- Admin Login -->
+    <div id="adm-login">
+        <div class="login-box">
+            <div class="section-title">Admin Login</div>
+            <div class="login-form-wrap" id="adm-login-form">
+                <div class="form-group"><label>Admin Password</label><input type="password" id="a_password" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+                <button class="submit-btn" onclick="doAdminLogin()">🛡️ Login as Admin</button>
+                <div id="admLoginErr" class="errorMsg"></div>
+            </div>
+            <div class="login-anim-wrap" id="adm-spinner"><div class="spinner-ring"></div><div class="spinner-text">Verifying admin credentials…</div></div>
+            <div class="login-anim-wrap" id="adm-success"><div class="success-circle">✓</div><div class="spinner-text">Access granted! Loading MIS…</div></div>
+        </div>
+    </div>
+
+    <!-- Admin Report Screen -->
+    <div id="adm-data" style="display:none">
+        <div class="report-header">
+            <span class="branch-badge">🛡️ Admin View</span>
+            <button class="logout-btn" onclick="doAdminLogout()">Logout</button>
+        </div>
+
+        <!-- Consolidated MIS view -->
+        <div id="adm-consolidated">
+            <div id="adm-mis-content"><div class="loading-spinner">⏳ Fetching all branch data…</div></div>
+        </div>
+
+        <!-- Individual branch drilldown -->
+        <div id="adm-drilldown" style="display:none">
+            <button class="back-btn" onclick="showConsolidated()">← Back to All Branches</button>
+            <div id="adm-drilldown-content"></div>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
+/* ═══════════════════════════════════
+   CONFIG — update GAS URL if redeployed
+═══════════════════════════════════ */
+const GAS_URL    = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
+const ADMIN_PASS = 'sml@admin2025'; // ← change to your admin password
 
+/* ═══════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════ */
+function switchTab(t) {
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-'+t).classList.add('active');
+    var idx = {leads:0,commitment:1,admin:2}[t];
+    document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+function switchSubTab(s) {
+    document.querySelectorAll('.sub-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.sub-tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('sub-'+s).classList.add('active');
+    document.querySelectorAll('.sub-tab-btn')[s==='entry'?0:1].classList.add('active');
+}
+
+/* ═══════════════════════════════════
+   LEAD FORM
+═══════════════════════════════════ */
 const sectorMap = {
     "Textiles & Apparel":       ["Textiles","Cloth Shops","Tailoring","Footwear","Gents/Ladies Wear","Fancy Shops"],
     "Food, Grocery & FMCG":     ["Supermarkets","Bakeries","Hotels","Restaurants","Tea Shops","Cool Bars","Provisions"],
@@ -149,100 +389,358 @@ const sectorMap = {
     "General Retail Shop":      ["Shop","Store","Mart"],
     "Others":                   []
 };
-
-const form       = document.getElementById('leadForm');
-const submitBtn  = document.getElementById('submitBtn');
-const sectorSel  = document.getElementById('f_sector');
-const bizSel     = document.getElementById('f_business');
-const bizGroup   = document.getElementById('bizGroup');
-const otherGroup = document.getElementById('otherGroup');
-const otherInput = document.getElementById('f_otherBusiness');
-const successMsg = document.getElementById('successMsg');
-const errorMsg   = document.getElementById('errorMsg');
-
 document.getElementById('f_date').valueAsDate = new Date();
-
-sectorSel.addEventListener('change', function () {
-    const sec = this.value;
-    bizSel.innerHTML = '<option value="">-- Select Business --</option>';
-    successMsg.style.display = 'none';
-    errorMsg.style.display   = 'none';
-    if (sec === 'Others') {
-        bizGroup.classList.add('hidden');
-        otherGroup.classList.remove('hidden');
-        bizSel.required     = false;
-        otherInput.required = true;
-    } else {
-        bizGroup.classList.remove('hidden');
-        otherGroup.classList.add('hidden');
-        bizSel.required     = true;
-        otherInput.required = false;
-        (sectorMap[sec] || []).forEach(function(b) {
-            var o = document.createElement('option');
-            o.value = o.textContent = b;
-            bizSel.appendChild(o);
-        });
-    }
+var sectorSel=document.getElementById('f_sector'), bizSel=document.getElementById('f_business'),
+    bizGroup=document.getElementById('bizGroup'), otherGroup=document.getElementById('otherGroup'),
+    otherInput=document.getElementById('f_otherBusiness');
+sectorSel.addEventListener('change',function(){
+    var sec=this.value; bizSel.innerHTML='<option value="">-- Select Business --</option>';
+    if(sec==='Others'){bizGroup.classList.add('hidden');otherGroup.classList.remove('hidden');bizSel.required=false;otherInput.required=true;}
+    else{bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
+        (sectorMap[sec]||[]).forEach(function(b){var o=document.createElement('option');o.value=o.textContent=b;bizSel.appendChild(o);});}
 });
-
-form.addEventListener('submit', function (e) {
+document.getElementById('leadForm').addEventListener('submit',function(e){
     e.preventDefault();
-    successMsg.style.display = 'none';
-    errorMsg.style.display   = 'none';
-
-    if (sectorSel.value === 'Others' && !otherInput.value.trim()) {
-        alert('Please specify the Business Type.');
-        otherInput.focus();
-        return;
-    }
-    if (!confirm('Submit this lead?')) return;
-
-    submitBtn.textContent = '⏳ Submitting...';
-    submitBtn.disabled    = true;
-
-    var params = new URLSearchParams({
-        action:        'submit',
-        date:          document.getElementById('f_date').value,
-        branch:        document.getElementById('f_branch').value,
-        execName:      document.getElementById('f_execName').value,
-        empCode:       document.getElementById('f_empCode').value,
-        sector:        sectorSel.value,
-        business:      sectorSel.value === 'Others' ? '' : bizSel.value,
-        otherBusiness: otherInput.value.trim(),
-        shopName:      document.getElementById('f_shopName').value,
-        ownerName:     document.getElementById('f_ownerName').value,
-        ownerNumber:   document.getElementById('f_ownerNumber').value,
-        status:        document.getElementById('f_status').value,
-        feedback:      document.getElementById('f_feedback').value,
-        followUp:      document.getElementById('f_followUp').value
-    });
-
-    // fetch with no-cors follows redirects and delivers the request to GAS
-    fetch(GAS_URL + '?' + params.toString(), {
-        method:   'GET',
-        mode:     'no-cors',
-        redirect: 'follow'
-    })
-    .then(function() {
-        successMsg.style.display = 'block';
-        form.reset();
-        document.getElementById('f_date').valueAsDate = new Date();
-        bizSel.innerHTML = '<option value="">-- Select Sector First --</option>';
-        bizGroup.classList.remove('hidden');
-        otherGroup.classList.add('hidden');
-        bizSel.required     = true;
-        otherInput.required = false;
-        submitBtn.textContent = 'Submit Lead';
-        submitBtn.disabled    = false;
-        window.scrollTo(0, 0);
-    })
-    .catch(function(err) {
-        errorMsg.textContent = '❌ Error: ' + err.message;
-        errorMsg.style.display = 'block';
-        submitBtn.textContent = 'Submit Lead';
-        submitBtn.disabled    = false;
-    });
+    document.getElementById('successMsg').style.display='none';document.getElementById('errorMsg').style.display='none';
+    if(sectorSel.value==='Others'&&!otherInput.value.trim()){alert('Please specify Business Type.');otherInput.focus();return;}
+    if(!confirm('Submit this lead?'))return;
+    var btn=document.getElementById('submitBtn');btn.textContent='⏳ Submitting…';btn.disabled=true;
+    var p=new URLSearchParams({action:'submit',date:document.getElementById('f_date').value,
+        branch:document.getElementById('f_branch').value,execName:document.getElementById('f_execName').value,
+        empCode:document.getElementById('f_empCode').value,sector:sectorSel.value,
+        business:sectorSel.value==='Others'?'':bizSel.value,otherBusiness:otherInput.value.trim(),
+        shopName:document.getElementById('f_shopName').value,ownerName:document.getElementById('f_ownerName').value,
+        ownerNumber:document.getElementById('f_ownerNumber').value,status:document.getElementById('f_status').value,
+        feedback:document.getElementById('f_feedback').value,followUp:document.getElementById('f_followUp').value});
+    fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
+    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();
+        document.getElementById('f_date').valueAsDate=new Date();bizSel.innerHTML='<option value="">-- Select Sector First --</option>';
+        bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
+        btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);})
+    .catch(function(err){document.getElementById('errorMsg').textContent='❌ '+err.message;document.getElementById('errorMsg').style.display='block';
+        btn.textContent='Submit Lead';btn.disabled=false;});
 });
+
+/* ═══════════════════════════════════
+   COMMITMENT ENTRY
+═══════════════════════════════════ */
+document.getElementById('c_date').valueAsDate=new Date();
+document.getElementById('commitForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var ok=document.getElementById('commitSuccessMsg'),er=document.getElementById('commitErrorMsg');
+    ok.style.display='none';er.style.display='none';
+    if(!confirm('Submit commitment data?'))return;
+    var btn=document.getElementById('commitSubmitBtn');btn.textContent='⏳ Submitting…';btn.disabled=true;
+    var p=new URLSearchParams({action:'submitCommitment',
+        c_date:document.getElementById('c_date').value,c_branch:document.getElementById('c_branch').value,
+        c_freshCount:document.getElementById('c_freshCount').value,c_disbAmount:document.getElementById('c_disbAmount').value,
+        c_disbCount:document.getElementById('c_disbCount').value,c_pipelineAmount:document.getElementById('c_pipelineAmount').value,
+        c_proposedAmount:document.getElementById('c_proposedAmount').value,c_approvalPending:document.getElementById('c_approvalPending').value,
+        c_approvedCases:document.getElementById('c_approvedCases').value,c_cibilCount:document.getElementById('c_cibilCount').value,
+        c_cibilAmount:document.getElementById('c_cibilAmount').value});
+    fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
+    .then(function(){ok.style.display='block';document.getElementById('commitForm').reset();
+        document.getElementById('c_date').valueAsDate=new Date();btn.textContent='Submit Commitment Data';btn.disabled=false;window.scrollTo(0,0);})
+    .catch(function(err){er.textContent='❌ '+err.message;er.style.display='block';btn.textContent='Submit Commitment Data';btn.disabled=false;});
+});
+
+/* ═══════════════════════════════════
+   BRANCH REPORT — LOGIN WITH ANIMATION
+═══════════════════════════════════ */
+var loggedBranch=null;
+function rptAnim(state){ // 'form'|'spin'|'ok'
+    document.getElementById('rpt-login-form').classList.toggle('fading',state!=='form');
+    document.getElementById('rpt-spinner').classList.toggle('active',state==='spin');
+    document.getElementById('rpt-success').classList.toggle('active',state==='ok');
+}
+function doLogin(){
+    var branch=document.getElementById('r_branch').value.trim(),
+        pass=document.getElementById('r_password').value.trim(),
+        err=document.getElementById('loginErr');
+    err.style.display='none';
+    if(!branch||!pass){err.textContent='❌ Please select branch and enter password.';err.style.display='block';return;}
+    rptAnim('spin');
+    fetch(GAS_URL+'?'+new URLSearchParams({action:'validateBranch',branch:branch,password:pass}),{method:'GET',mode:'cors'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.valid){
+            rptAnim('ok');
+            setTimeout(function(){
+                loggedBranch=branch;
+                document.getElementById('rpt-login').style.display='none';
+                document.getElementById('rpt-data').style.display='block';
+                document.getElementById('rpt-badge').textContent='📍 '+branch;
+                rptAnim('form');
+                loadBranchRpt(branch);
+            },900);
+        } else { rptAnim('form');err.textContent='❌ Incorrect password. Please try again.';err.style.display='block'; }
+    })
+    .catch(function(){rptAnim('form');document.getElementById('loginErr').textContent='❌ Connection error.';document.getElementById('loginErr').style.display='block';});
+}
+function doLogout(){
+    loggedBranch=null;
+    document.getElementById('rpt-login').style.display='block';
+    document.getElementById('rpt-data').style.display='none';
+    document.getElementById('r_password').value='';
+    document.getElementById('rpt-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';
+}
+function loadBranchRpt(branch){
+    fetch(GAS_URL+'?'+new URLSearchParams({action:'getCommitmentReport',branch:branch}),{method:'GET',mode:'cors'})
+    .then(function(r){return r.json();})
+    .then(function(d){document.getElementById('rpt-content').innerHTML=buildBranchRpt(d);})
+    .catch(function(e){document.getElementById('rpt-content').innerHTML='<div class="errorMsg" style="display:block">❌ '+e.message+'</div>';});
+}
+
+/* ═══════════════════════════════════
+   ADMIN LOGIN WITH ANIMATION
+═══════════════════════════════════ */
+function admAnim(state){
+    document.getElementById('adm-login-form').classList.toggle('fading',state!=='form');
+    document.getElementById('adm-spinner').classList.toggle('active',state==='spin');
+    document.getElementById('adm-success').classList.toggle('active',state==='ok');
+}
+function doAdminLogin(){
+    var pass=document.getElementById('a_password').value.trim(),
+        err=document.getElementById('admLoginErr');
+    err.style.display='none';
+    if(!pass){err.textContent='❌ Please enter admin password.';err.style.display='block';return;}
+    admAnim('spin');
+    setTimeout(function(){
+        if(pass===ADMIN_PASS){
+            admAnim('ok');
+            setTimeout(function(){
+                admAnim('form');
+                document.getElementById('adm-login').style.display='none';
+                document.getElementById('adm-data').style.display='block';
+                loadAdminMIS();
+            },900);
+        } else {admAnim('form');err.textContent='❌ Incorrect admin password.';err.style.display='block';}
+    },800);
+}
+function doAdminLogout(){
+    document.getElementById('adm-login').style.display='block';
+    document.getElementById('adm-data').style.display='none';
+    document.getElementById('a_password').value='';
+    document.getElementById('adm-mis-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';
+    showConsolidated();
+}
+
+/* ═══════════════════════════════════
+   ADMIN MIS — FETCH & RENDER
+═══════════════════════════════════ */
+var adminCache=null;
+function loadAdminMIS(){
+    document.getElementById('adm-mis-content').innerHTML='<div class="loading-spinner">⏳ Fetching all branch data…</div>';
+    fetch(GAS_URL+'?'+new URLSearchParams({action:'getAdminReport'}),{method:'GET',mode:'cors'})
+    .then(function(r){return r.json();})
+    .then(function(data){adminCache=data;renderAdminMIS(data);})
+    .catch(function(e){document.getElementById('adm-mis-content').innerHTML='<div class="errorMsg" style="display:block">❌ '+e.message+'</div>';});
+}
+
+function renderAdminMIS(data){
+    // Grand totals
+    var G={disb:0,disbCnt:0,fresh:0,pipeline:0,proposed:0,pending:0,approved:0,cibilCnt:0,cibilAmt:0,target:0};
+    data.forEach(function(b){
+        G.disb     += b.totals.disbursementAmount||0;
+        G.disbCnt  += b.totals.disbursementCount||0;
+        G.fresh    += b.totals.freshCount||0;
+        G.pipeline += b.totals.pipelineAmount||0;
+        G.proposed += b.totals.proposedAmount||0;
+        G.pending  += b.totals.approvalPending||0;
+        G.approved += b.totals.approvedCases||0;
+        G.cibilCnt += b.totals.cibilCount||0;
+        G.cibilAmt += b.totals.cibilAmount||0;
+        G.target   += b.target.target||0;
+    });
+
+    var today = new Date();
+    var dateStr = today.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');
+
+    // Build MIS table matching the attached format
+    var html = '';
+
+    // Title row
+    html += '<div class="mis-title-area">';
+    html += '<div class="mis-main-title">SML Traders Loan Business MIS as on</div>';
+    html += '<div class="mis-date">'+dateStr+'</div>';
+    html += '<div class="mis-right-label">Remaining CIBIL +ve Cases</div>';
+    html += '</div>';
+
+    html += '<div class="mis-wrap"><table class="mis">';
+    // Header
+    html += '<tr class="mis-header">'
+        + '<th>BRANCH</th>'
+        + '<th>Loan Target (₹)</th>'
+        + '<th>No.</th>'
+        + '<th>Fresh Cust No.</th>'
+        + '<th>AMOUNT</th>'
+        + '<th>ACHIEVED (%)</th>'
+        + '<th>Short Fall</th>'
+        + '<th>Approved Cases</th>'
+        + '<th>Approval Pending Cases</th>'
+        + '<th>Proposed from Branch</th>'
+        + '<th>Projection from Branch</th>'
+        + '<th>Count</th>'
+        + '<th>Amount</th>'
+        + '</tr>';
+
+    // Branch rows
+    data.forEach(function(b){
+        var tgt = b.target.target||0;
+        var ach = b.totals.disbursementAmount||0;
+        var pct = tgt>0 ? (ach/tgt*100).toFixed(1) : null;
+        var sf  = tgt - ach;
+        var pctClass = pct===null?'':parseFloat(pct)>=100?'mis-pct-good':parseFloat(pct)>=70?'mis-pct-warn':'mis-pct-bad';
+        var sfClass  = sf<=0?'mis-sf-pos':'mis-sf-neg';
+        html += '<tr>'
+            + '<td style="cursor:pointer;color:#1a73e8;text-decoration:underline" onclick="showDrilldown(\''+b.branch+'\')">'+b.branch+'</td>'
+            + '<td>'+(tgt>0?fmt(tgt):'-')+'</td>'
+            + '<td>'+fmt(b.totals.disbursementCount)+'</td>'
+            + '<td>'+fmt(b.totals.freshCount)+'</td>'
+            + '<td>'+(ach>0?fmt(ach):'0.00')+'</td>'
+            + '<td class="mis-achieved '+pctClass+'">'+(pct!==null?pct+'%':'#DIV/0!')+'</td>'
+            + '<td class="'+sfClass+'">'+(tgt>0?(sf<=0?'+'+fmt(Math.abs(sf)):fmt(sf)):'-')+'</td>'
+            + '<td>'+(b.totals.approvedCases>0?fmt(b.totals.approvedCases):'-')+'</td>'
+            + '<td>'+(b.totals.approvalPending>0?fmt(b.totals.approvalPending):'-')+'</td>'
+            + '<td>'+(b.totals.proposedAmount>0?fmt(b.totals.proposedAmount):'-')+'</td>'
+            + '<td>'+(b.totals.pipelineAmount>0?fmt(b.totals.pipelineAmount):'-')+'</td>'
+            + '<td>'+(b.totals.cibilCount>0?fmt(b.totals.cibilCount):'0')+'</td>'
+            + '<td>'+(b.totals.cibilAmount>0?fmt(b.totals.cibilAmount):'')+'</td>'
+            + '</tr>';
+    });
+
+    // Grand total row
+    var gPct = G.target>0?(G.disb/G.target*100).toFixed(1):null;
+    var gSf  = G.target-G.disb;
+    html += '<tr class="mis-total">'
+        + '<td>TOTAL</td>'
+        + '<td>'+fmt(G.target)+'</td>'
+        + '<td>'+fmt(G.disbCnt)+'</td>'
+        + '<td>'+fmt(G.fresh)+'</td>'
+        + '<td>'+G.disb.toFixed(2)+'</td>'
+        + '<td class="mis-achieved '+(gPct!==null?(parseFloat(gPct)>=100?'mis-pct-good':parseFloat(gPct)>=70?'mis-pct-warn':'mis-pct-bad'):'')+'>'+(gPct!==null?gPct+'%':'#DIV/0!')+'</td>'
+        + '<td class="'+(gSf<=0?'mis-sf-pos':'mis-sf-neg')+'">'+fmt(Math.abs(gSf))+'</td>'
+        + '<td>'+fmt(G.approved)+'</td>'
+        + '<td>'+fmt(G.pending)+'</td>'
+        + '<td>'+fmt(G.proposed)+'</td>'
+        + '<td>'+fmt(G.pipeline)+'</td>'
+        + '<td>'+fmt(G.cibilCnt)+'</td>'
+        + '<td>'+fmt(G.cibilAmt)+'</td>'
+        + '</tr>';
+    html += '</table></div>';
+    html += '<p style="color:#70757a;font-size:11px;margin-top:8px;text-align:center">💡 Tap a branch name to view its detailed report</p>';
+
+    document.getElementById('adm-mis-content').innerHTML = html;
+}
+
+function showDrilldown(branch){
+    if(!adminCache) return;
+    var d = adminCache.find(function(b){return b.branch===branch;});
+    if(!d) return;
+    document.getElementById('adm-consolidated').style.display='none';
+    document.getElementById('adm-drilldown').style.display='block';
+    document.getElementById('adm-drilldown-content').innerHTML =
+        '<span class="branch-badge" style="display:inline-block;margin-bottom:14px">📍 '+branch+'</span>'
+        + buildBranchRpt(d);
+}
+function showConsolidated(){
+    document.getElementById('adm-consolidated').style.display='block';
+    document.getElementById('adm-drilldown').style.display='none';
+}
+
+/* ═══════════════════════════════════
+   SHARED BRANCH REPORT BUILDER (mobile-friendly)
+═══════════════════════════════════ */
+function buildBranchRpt(data){
+    var tgt=data.target||{}, tot=data.totals||{}, rows=data.rows||[];
+    var disbPct = tgt.target>0?(tot.disbursementAmount/tgt.target*100).toFixed(1):null;
+    var h='';
+
+    // Metric cards 2-col on mobile
+    h+='<div class="metric-cards">';
+    h+=mCard('Total Disbursed','₹ '+fmt(tot.disbursementAmount),disbPct!==null?disbPct+'% of target':'No target',disbPct);
+    h+=mCard('Disb. Count',fmt(tot.disbursementCount),'cases',null);
+    h+=mCard('Fresh Customers',fmt(tot.freshCount),'customers',null);
+    h+=mCard('Approved Cases',fmt(tot.approvedCases),'cases',null);
+    h+=mCard('Approval Pending',fmt(tot.approvalPending),'pending',null);
+    h+=mCard('Pipeline Amt','₹ '+fmt(tot.pipelineAmount),'pipeline',null);
+    h+=mCard('Proposed Amt','₹ '+fmt(tot.proposedAmount),'proposed',null);
+    h+=mCard('CIBIL Count',fmt(tot.cibilCount),'positive',null);
+    h+=mCard('CIBIL Amount','₹ '+fmt(tot.cibilAmount),'',null);
+    h+='</div>';
+
+    // Target vs Achievement progress card
+    if(tgt.target){
+        var sf=tgt.target-(tot.disbursementAmount||0);
+        var pct=parseFloat(disbPct);
+        var barCls=pct>=100?'bar-good':pct>=70?'bar-warn':'bar-bad';
+        h+='<div class="section-title">Target vs Achievement</div>';
+        h+='<div class="tva-card">'
+            +'<div class="tva-title">Disbursement Amount</div>'
+            +'<div class="tva-row"><span class="tva-key">Target</span><span class="tva-val">₹ '+fmt(tgt.target)+'</span></div>'
+            +'<div class="tva-row"><span class="tva-key">Achievement</span><span class="tva-val">₹ '+fmt(tot.disbursementAmount)+'</span></div>'
+            +'<div class="tva-row"><span class="tva-key">% Achieved</span><span class="tva-val '+pctCls(pct)+'">'+disbPct+'%</span></div>'
+            +'<div class="tva-row"><span class="tva-key">Shortfall</span><span class="tva-val '+(sf<=0?'sf-pos':'sf-neg')+'">'
+            +(sf<=0?'✅ Surplus ₹'+fmt(Math.abs(sf)):'▼ ₹'+fmt(sf))+'</span></div>'
+            +'<div class="progress-wrap"><div class="progress-bar '+barCls+'" style="width:'+Math.min(pct,100)+'%"></div></div>'
+            +'</div>';
+    }
+
+    // Daily log table
+    if(rows.length>0){
+        h+='<div class="section-title" style="margin-top:18px">Daily Entry Log</div>';
+        h+='<div class="tbl-wrap"><table class="rt">';
+        h+='<tr><th>Date</th><th>Fresh</th><th>Disb.Amt(₹)</th><th>Disb.Cnt</th>'
+          +'<th>Pipeline(₹)</th><th>Proposed(₹)</th><th>Pending</th><th>Approved</th>'
+          +'<th>CIBIL Cnt</th><th>CIBIL Amt(₹)</th></tr>';
+        rows.forEach(function(r){
+            h+='<tr>'
+              +'<td>'+( r.date||'')+'</td>'
+              +'<td>'+fmt(r.freshCount)+'</td>'
+              +'<td>'+fmt(r.disbursementAmount)+'</td>'
+              +'<td>'+fmt(r.disbursementCount)+'</td>'
+              +'<td>'+fmt(r.pipelineAmount)+'</td>'
+              +'<td>'+fmt(r.proposedAmount)+'</td>'
+              +'<td>'+fmt(r.approvalPending)+'</td>'
+              +'<td>'+fmt(r.approvedCases)+'</td>'
+              +'<td>'+fmt(r.cibilCount)+'</td>'
+              +'<td>'+fmt(r.cibilAmount)+'</td>'
+              +'</tr>';
+        });
+        h+='<tr class="tr-total">'
+          +'<td>TOTAL</td>'
+          +'<td>'+fmt(tot.freshCount)+'</td>'
+          +'<td>'+fmt(tot.disbursementAmount)+'</td>'
+          +'<td>'+fmt(tot.disbursementCount)+'</td>'
+          +'<td>'+fmt(tot.pipelineAmount)+'</td>'
+          +'<td>'+fmt(tot.proposedAmount)+'</td>'
+          +'<td>'+fmt(tot.approvalPending)+'</td>'
+          +'<td>'+fmt(tot.approvedCases)+'</td>'
+          +'<td>'+fmt(tot.cibilCount)+'</td>'
+          +'<td>'+fmt(tot.cibilAmount)+'</td>'
+          +'</tr>';
+        h+='</table></div>';
+    } else {
+        h+='<p style="color:#70757a;text-align:center;padding:20px 0;font-size:14px">No entries yet for this branch.</p>';
+    }
+    return h;
+}
+
+/* ═══════════════════════════════════
+   HELPERS
+═══════════════════════════════════ */
+function fmt(n){
+    if(n===undefined||n===null||n==='') return '—';
+    var v=parseFloat(n); if(isNaN(v)) return n;
+    return v.toLocaleString('en-IN',{maximumFractionDigits:2});
+}
+function pctCls(p){return p>=100?'pct-good':p>=70?'pct-warn':'pct-bad';}
+function mCard(label,val,sub,pct){
+    var sc=pct!==null&&pct!==undefined?' class="'+pctCls(parseFloat(pct))+'"':'';
+    return '<div class="metric-card"><div class="mc-label">'+label+'</div>'
+          +'<div class="mc-value">'+val+'</div>'
+          +'<div class="mc-sub"'+sc+'>'+sub+'</div></div>';
+}
 </script>
 </body>
 </html>
