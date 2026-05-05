@@ -180,10 +180,54 @@
             const response = await fetch(SCRIPT_URL + '?action=getData');
             rawData = await response.json();
             document.getElementById('statusMsg').style.display = 'none';
+            // Log sample to console so you can verify date format from your sheet
+            if (rawData.length > 0) {
+                console.log('Sample record:', rawData[0]);
+                console.log('Date field value:', rawData[0].visitdate || rawData[0].date);
+            }
             processDailyData();
         } catch (e) {
             document.getElementById('statusMsg').innerHTML = `<span style="color:red;">Error connecting to MIS server.</span>`;
         }
+    }
+
+    function normalizeDate(raw) {
+        // Handles all common formats from Google Sheets:
+        // DD/MM/YYYY, MM/DD/YYYY (we treat / as DD/MM for India),
+        // YYYY-MM-DD, DD-MM-YYYY, and JS Date strings
+        if (!raw) return '';
+        const s = raw.toString().trim();
+
+        // Already YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+        // Slash-separated: treat as DD/MM/YYYY (Indian format)
+        const slashParts = s.split('/');
+        if (slashParts.length === 3) {
+            let [a, b, y] = slashParts;
+            // If year is first part (YYYY/MM/DD)
+            if (a.length === 4) return `${a}-${b.padStart(2,'0')}-${y.padStart(2,'0')}`;
+            // Indian DD/MM/YYYY
+            return `${y}-${b.padStart(2,'0')}-${a.padStart(2,'0')}`;
+        }
+
+        // Dash-separated: DD-MM-YYYY
+        const dashParts = s.split('-');
+        if (dashParts.length === 3 && dashParts[0].length <= 2) {
+            const [d, m, y] = dashParts;
+            return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        }
+
+        // JS Date string / Google Sheets date serial string
+        const parsed = new Date(s);
+        if (!isNaN(parsed)) {
+            const y = parsed.getFullYear();
+            const m = String(parsed.getMonth()+1).padStart(2,'0');
+            const d = String(parsed.getDate()).padStart(2,'0');
+            return `${y}-${m}-${d}`;
+        }
+
+        return '';
     }
 
     function processDailyData() {
@@ -195,15 +239,12 @@
         tbody.innerHTML = "";
 
         const dailyLeads = rawData.filter(d => {
-            const dateStr = d.visitdate || d.date; 
+            const dateStr = d.visitdate || d.date;
             if (!dateStr) return false;
-            
-            const parts = dateStr.split("/"); 
-            if (parts.length === 3) {
-                const formattedSheetDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-                return formattedSheetDate === selectedDate;
-            }
-            return false;
+            const normalized = normalizeDate(dateStr);
+            // Debug: uncomment below to see what dates look like in console
+            // console.log('raw:', dateStr, '→ normalized:', normalized, '| selected:', selectedDate);
+            return normalized === selectedDate;
         });
 
         if (dailyLeads.length === 0) {
