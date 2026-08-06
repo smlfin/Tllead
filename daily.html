@@ -61,6 +61,23 @@
             color: var(--primary);
         }
 
+        .btn-download {
+            background: #34a853;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .btn-download:hover {
+            background: #2c8f47;
+        }
+
         .date-container {
             background: #fff;
             padding: 10px 20px;
@@ -251,6 +268,7 @@
             <span class="date-label">Insight Date</span>
             <input type="date" id="targetDate" class="date-picker" onchange="processDailyData()">
         </div>
+        <button class="btn-download" onclick="downloadDuplicateReport()">⬇ Duplicate Number Report</button>
     </div>
 
     <div id="statusMsg">Fetching global lead data...</div>
@@ -295,16 +313,29 @@
     async function init() {
         try {
             const response = await fetch(SCRIPT_URL + '?action=getData');
-            rawData = await response.json();
+            if (!response.ok) {
+                throw new Error(`Server responded with status ${response.status}`);
+            }
+            const text = await response.text();
+            try {
+                rawData = JSON.parse(text);
+            } catch (parseErr) {
+                console.error('Non-JSON response from server:', text);
+                throw new Error('Server did not return valid data (check Apps Script deployment access).');
+            }
+            if (rawData && rawData.error) {
+                throw new Error(rawData.error);
+            }
             document.getElementById('statusMsg').style.display = 'none';
-            // Log sample to console so you can verify date format from your sheet
             if (rawData.length > 0) {
                 console.log('Sample record:', rawData[0]);
                 console.log('Date field value:', rawData[0].visitdate || rawData[0].date);
             }
             processDailyData();
         } catch (e) {
-            document.getElementById('statusMsg').innerHTML = `<span style="color:red;">Error connecting to MIS server.</span>`;
+            console.error('MIS connection error:', e);
+            document.getElementById('statusMsg').innerHTML =
+                `<span style="color:red;">Error connecting to MIS server: ${e.message}</span>`;
         }
     }
 
@@ -514,6 +545,87 @@
 
     function closeModal() {
         document.getElementById('modalOverlay').style.display = 'none';
+    }
+
+    // Scans the FULL dataset for history, but only includes phone numbers
+    // that have an instance falling on the currently selected Insight Date.
+    // For each such number, every instance (any date) is still listed so
+    // you can see the full history — dates, names, feedback — behind it.
+    function downloadDuplicateReport() {
+        const selectedDate = document.getElementById('targetDate').value;
+        if (!selectedDate) {
+            alert('Please select a date first.');
+            return;
+        }
+
+        const groups = {};
+        rawData.forEach(d => {
+            const phone = normalizePhoneJS(d.ownernumber);
+            if (!phone) return;
+            if (!groups[phone]) groups[phone] = [];
+            groups[phone].push(d);
+        });
+
+        // Only phone numbers with more than one instance overall...
+        let dupPhones = Object.keys(groups).filter(p => groups[p].length > 1);
+
+        // ...AND at least one of those instances falls on the selected date
+        dupPhones = dupPhones.filter(phone =>
+            groups[phone].some(d => normalizeDate(d.date || d.visitdate) === selectedDate)
+        );
+
+        if (dupPhones.length === 0) {
+            alert('No duplicate phone numbers found for the selected date.');
+            return;
+        }
+
+        // Most suspicious (most distinct owner names on one number) first
+        const distinctNameCount = (phone) => {
+            const names = groups[phone].map(i => (i.ownername || '').trim().toLowerCase()).filter(Boolean);
+            return new Set(names).size;
+        };
+        dupPhones = dupPhones.sort((a, b) => distinctNameCount(b) - distinctNameCount(a));
+
+        const rows = [[
+            'Phone Number', 'Suspicious (Multiple Names)', 'Distinct Owner Names Used',
+            'Instance Date', 'Owner Name', 'Exec Name', 'Branch', 'Status', 'Feedback'
+        ]];
+
+        dupPhones.forEach(phone => {
+            const instances = groups[phone].slice().sort(
+                (a, b) => parseDateForSort(a.date || a.visitdate) - parseDateForSort(b.date || b.visitdate)
+            );
+            const distinct = distinctNameCount(phone);
+            const suspicious = distinct > 1 ? 'Yes' : 'No';
+
+            instances.forEach(inst => {
+                rows.push([
+                    phone,
+                    suspicious,
+                    distinct,
+                    formatDateOnly(inst.date || inst.visitdate),
+                    inst.ownername || '',
+                    inst.execname || '',
+                    inst.branch || '',
+                    inst.status || '',
+                    inst.feedback || ''
+                ]);
+            });
+        });
+
+        const csvContent = rows.map(r =>
+            r.map(v => `"${v.toString().replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Duplicate_Phone_Report_${selectedDate}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 </script>
 </body>
