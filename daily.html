@@ -119,6 +119,30 @@
             display: inline-block;
         }
 
+        .count-badge.visit { background: #e6f4ea; color: #1e7e34; }
+        .count-badge.call  { background: #fef7e0; color: #b06500; }
+        .count-badge.total { background: #e8f0fe; color: var(--primary); }
+
+        .dup-badge {
+            background: #fce8e6;
+            color: #c5221f;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .dup-badge:hover {
+            background: #f9c8c4;
+        }
+
+        .dup-none {
+            color: var(--text-light);
+            font-size: 12px;
+        }
+
         .no-data {
             display: none;
             text-align: center;
@@ -133,6 +157,85 @@
             padding: 20px;
             font-weight: 600;
             color: var(--primary);
+        }
+
+        /* ── Duplicate drill-down modal ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 720px;
+            max-height: 80vh;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .modal-body h4 {
+            margin: 20px 0 8px;
+            font-size: 13px;
+            color: var(--primary);
+        }
+
+        .modal-body h4:first-child {
+            margin-top: 0;
+        }
+
+        .modal-body table {
+            margin-top: 0;
+        }
+
+        .modal-body th, .modal-body td {
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .no-prev {
+            color: var(--text-light);
+            font-style: italic;
+            font-size: 13px;
+            padding: 10px 0 20px;
         }
     </style>
 </head>
@@ -157,7 +260,10 @@
             <tr>
                 <th>Branch</th>
                 <th>Executive Name (Emp Code)</th>
-                <th style="text-align:center;">No. of Leads</th>
+                <th style="text-align:center;">Visits</th>
+                <th style="text-align:center;">Calls</th>
+                <th style="text-align:center;">Total</th>
+                <th style="text-align:center;">Duplicate Phones</th>
             </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -166,9 +272,20 @@
     <div id="noDataMsg" class="no-data">No lead records found for the selected date.</div>
 </div>
 
+<div id="modalOverlay" class="modal-overlay" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="modalTitle">Duplicate History</h3>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+    </div>
+</div>
+
 <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
     let rawData = [];
+    let currentSummary = {};
 
     window.onload = function() {
         document.getElementById('targetDate').valueAsDate = new Date();
@@ -230,6 +347,58 @@
         return '';
     }
 
+    function getActivity(d) {
+        const act = (d.activity || '').toString().trim();
+        return act || 'Visit';
+    }
+
+    function isDuplicate(d) {
+        return (d.duplicate || '').toString().trim().toLowerCase() === 'yes';
+    }
+
+    function normalizePhoneJS(v) {
+        const digits = (v || '').toString().replace(/\D/g, '');
+        return digits.length >= 10 ? digits.slice(-10) : digits;
+    }
+
+    function parseDateForSort(raw) {
+        const norm = normalizeDate(raw);
+        return norm ? new Date(norm) : new Date(0);
+    }
+
+    // Strips any timestamp portion and returns a clean dd/mm/yyyy string,
+    // regardless of whether the sheet gave us a plain date string or a
+    // full JS Date/ISO string.
+    function formatDateOnly(raw) {
+        if (!raw) return '—';
+        const s = raw.toString().trim();
+
+        // Already dd/mm/yyyy, no time
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+        // dd/mm/yyyy with a time portion tacked on
+        const dmy = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dmy) return `${dmy[1]}/${dmy[2]}/${dmy[3]}`;
+
+        // ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ
+        // Pulled straight out of the string — deliberately NOT routed
+        // through `new Date()` + local getters, since that can shift
+        // the day by one depending on the viewer's timezone.
+        const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+
+        // Last-resort fallback for anything else
+        const d = new Date(s);
+        if (!isNaN(d)) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        return s;
+    }
+
     function processDailyData() {
         const selectedDate = document.getElementById('targetDate').value; 
         const tbody = document.getElementById('tableBody');
@@ -242,14 +411,13 @@
             const dateStr = d.visitdate || d.date;
             if (!dateStr) return false;
             const normalized = normalizeDate(dateStr);
-            // Debug: uncomment below to see what dates look like in console
-            // console.log('raw:', dateStr, '→ normalized:', normalized, '| selected:', selectedDate);
             return normalized === selectedDate;
         });
 
         if (dailyLeads.length === 0) {
             table.style.display = 'none';
             noDataMsg.style.display = 'block';
+            currentSummary = {};
             return;
         }
 
@@ -262,23 +430,90 @@
                 acc[code] = {
                     name: curr.execname || "Unknown",
                     branch: curr.branch || "Unknown",
-                    count: 0
+                    visits: 0,
+                    calls: 0,
+                    duplicates: 0,
+                    dupRecords: []
                 };
             }
-            acc[code].count++; 
+            const activity = getActivity(curr);
+            if (activity === 'Call') {
+                acc[code].calls++;
+            } else {
+                acc[code].visits++;
+            }
+            if (isDuplicate(curr)) {
+                acc[code].duplicates++;
+                acc[code].dupRecords.push(curr);
+            }
             return acc;
         }, {});
 
+        currentSummary = summary;
+
         Object.keys(summary).forEach(code => {
             const row = summary[code];
+            const total = row.visits + row.calls;
+            const safeCode = code.replace(/'/g, "\\'");
+            const dupCell = row.duplicates > 0
+                ? `<span class="dup-badge" onclick="showDuplicateDrilldown('${safeCode}')">⚠ ${row.duplicates}</span>`
+                : `<span class="dup-none">—</span>`;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${row.branch}</strong></td>
                 <td>${row.name} <span style="color:var(--text-light); font-size:12px;">(${code})</span></td>
-                <td style="text-align:center;"><span class="count-badge">${row.count}</span></td>
+                <td style="text-align:center;"><span class="count-badge visit">${row.visits}</span></td>
+                <td style="text-align:center;"><span class="count-badge call">${row.calls}</span></td>
+                <td style="text-align:center;"><span class="count-badge total">${total}</span></td>
+                <td style="text-align:center;">${dupCell}</td>
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    function showDuplicateDrilldown(code) {
+        const row = currentSummary[code];
+        if (!row || !row.dupRecords || row.dupRecords.length === 0) return;
+
+        const modal = document.getElementById('modalOverlay');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+
+        title.innerText = `Duplicate Phone History — ${row.name} (${code})`;
+
+        let html = '';
+        row.dupRecords.forEach(record => {
+            const phone = normalizePhoneJS(record.ownernumber);
+
+            const previous = rawData.filter(d => {
+                if (d === record) return false;
+                return phone !== '' && normalizePhoneJS(d.ownernumber) === phone;
+            }).sort((a, b) => parseDateForSort(a.date || a.visitdate) - parseDateForSort(b.date || b.visitdate));
+
+            html += `<h4>Owner Number: ${record.ownernumber || 'N/A'}${record.ownername ? ' — ' + record.ownername : ''}</h4>`;
+
+            if (previous.length === 0) {
+                html += `<div class="no-prev">No earlier instance found in the dataset.</div>`;
+            } else {
+                html += `<table><tr><th>Date</th><th>Owner Name</th><th>Owner Number</th><th>Feedback</th></tr>`;
+                previous.forEach(p => {
+                    html += `<tr>
+                        <td>${formatDateOnly(p.date || p.visitdate)}</td>
+                        <td>${p.ownername || '—'}</td>
+                        <td>${p.ownernumber || '—'}</td>
+                        <td>${p.feedback || '—'}</td>
+                    </tr>`;
+                });
+                html += `</table>`;
+            }
+        });
+
+        body.innerHTML = html;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
     }
 </script>
 </body>
