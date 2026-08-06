@@ -43,7 +43,7 @@ body {
 
 .tile-grid { 
     display: grid; 
-    grid-template-columns: repeat(4, 1fr); 
+    grid-template-columns: repeat(3, 1fr); 
     gap: 15px; 
     margin-bottom: 20px; 
 }
@@ -59,6 +59,10 @@ body {
 .tile h2 { margin: 5px 0; color: #1a73e8; }
 
 /* Status Colors */
+.border-blue { border-color: #1a73e8; }
+.text-blue { color: #1a73e8; }
+.border-orange { border-color: #e8710a; }
+.text-orange { color: #e8710a; }
 .border-green { border-color: #34a853; }
 .text-green { color: #34a853; }
 .border-yellow { border-color: #fbbc05; }
