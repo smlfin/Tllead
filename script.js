@@ -1,7 +1,78 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
 let rawData = [];
 let charts = {};
-let activeFilteredData = []; 
+let activeFilteredData = [];
+
+function getActivity(d) {
+    const act = (d.activity || '').toString().trim();
+    return act || 'Visit';
+}
+
+function isDuplicate(d) {
+    return (d.duplicate || '').toString().trim().toLowerCase() === 'yes';
+}
+
+function normalizePhoneJS(v) {
+    const digits = (v || '').toString().replace(/\D/g, '');
+    return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
+// Strips any timestamp portion and returns a clean dd/mm/yyyy string.
+function formatDateOnly(raw) {
+    if (!raw) return '—';
+    const s = raw.toString().trim();
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+    const dmy = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (dmy) return `${dmy[1]}/${dmy[2]}/${dmy[3]}`;
+
+    // ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ
+    // Pulled straight out of the string — deliberately NOT routed
+    // through `new Date()` + local getters, since that can shift
+    // the day by one depending on the viewer's timezone.
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+
+    const d = new Date(s);
+    if (!isNaN(d)) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    }
+
+    return s;
+}
+
+function parseLeadDate(raw) {
+    if (!raw) return new Date(0);
+    const s = raw.toString().trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s);
+    const parts = s.split('/');
+    if (parts.length === 3) {
+        // dd/mm/yyyy (matches how the backend formats Date)
+        const [d, m, y] = parts;
+        const parsed = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+        if (!isNaN(parsed)) return parsed;
+    }
+    const parsed = new Date(s);
+    return isNaN(parsed) ? new Date(0) : parsed;
+}
+
+// Finds the earliest OTHER record in the full dataset with the same
+// phone number as `item`. Used to show what a duplicate lead's
+// previous instance was (date + activity type).
+function findPreviousInstance(item) {
+    const phone = normalizePhoneJS(item.ownernumber);
+    if (!phone) return null;
+
+    const others = rawData.filter(d => d !== item && normalizePhoneJS(d.ownernumber) === phone);
+    if (others.length === 0) return null;
+
+    others.sort((a, b) => parseLeadDate(a.date || a.visitdate) - parseLeadDate(b.date || b.visitdate));
+    return others[0];
+}
 
 function checkLogin() {
     if(document.getElementById('user').value === "1") {
@@ -90,6 +161,11 @@ function updateUI(data) {
         return data.filter(d => (d[statusKey] || "").toString().trim() === val).length;
     };
 
+    const visitCount = data.filter(d => getActivity(d) === 'Visit').length;
+    const callCount  = data.filter(d => getActivity(d) === 'Call').length;
+
+    document.getElementById('tVisit').innerText = visitCount;
+    document.getElementById('tCall').innerText  = callCount;
     document.getElementById('tTotal').innerText = data.length;
     document.getElementById('tInt').innerText   = getCount("Interested");
     document.getElementById('tFol').innerText   = getCount("Follow-up Required");
@@ -151,7 +227,10 @@ function showLeadPopup(statusLabel) {
 
     const filtered = activeFilteredData.filter(d => {
         const currentStatus = (d[statusKey] || "").toString().trim();
-        return targetStatus === 'Total' ? true : currentStatus === targetStatus;
+        if (targetStatus === 'Total') return true;
+        if (targetStatus === 'Visit') return getActivity(d) === 'Visit';
+        if (targetStatus === 'Call') return getActivity(d) === 'Call';
+        return currentStatus === targetStatus;
     });
 
     const summaryMap = filtered.reduce((acc, curr) => {
@@ -203,12 +282,26 @@ function showDeepDetail(dataId) {
     const title = document.getElementById('modalTitle');
     
     title.innerText = "Lead Owner Details";
-    let html = `<table><tr><th>Business Category</th><th>Owner Name</th><th>Owner Number</th></tr>`;
+    let html = `<table><tr><th>Activity</th><th>Product</th><th>Business Category</th><th>Owner Name</th><th>Owner Number</th><th>Duplicate</th><th>Prev. Instance Date</th><th>Prev. Activity</th></tr>`;
     items.forEach(item => {
+        const activity = getActivity(item);
+        const product = item.product || 'N/A';
         const category = item.businesscategory || item.sector || 'N/A';
         const name = item.ownername || item.name || 'N/A';
         const contact = item.ownernumber || item.mobile || item.contact || 'N/A';
-        html += `<tr><td>${category}</td><td>${name}</td><td>${contact}</td></tr>`;
+        const dup = isDuplicate(item) ? '⚠ Yes' : 'No';
+
+        let prevDate = '—';
+        let prevActivity = '—';
+        if (isDuplicate(item)) {
+            const prev = findPreviousInstance(item);
+            if (prev) {
+                prevDate = formatDateOnly(prev.date || prev.visitdate);
+                prevActivity = getActivity(prev);
+            }
+        }
+
+        html += `<tr><td>${activity}</td><td>${product}</td><td>${category}</td><td>${name}</td><td>${contact}</td><td>${dup}</td><td>${prevDate}</td><td>${prevActivity}</td></tr>`;
     });
     body.innerHTML = html + `</table><button onclick="closeModal()" style="margin-top:15px; background:#666; color: white; border: none; padding: 10px 20px; border-radius: 4px;">Close</button>`;
 }
