@@ -177,6 +177,24 @@
         <div class="form-group"><label>Executive Name <span>*</span></label><input type="text" id="f_execName" placeholder="Full Name" required></div>
         <div class="form-group"><label>Employee Code <span>*</span></label><input type="text" id="f_empCode" placeholder="E-XXXX" required></div>
 
+        <div class="section-title">Activity &amp; Product</div>
+        <div class="form-group">
+            <label>Activity Type <span>*</span></label>
+            <select id="f_activity" required>
+                <option value="">-- Select Activity --</option>
+                <option value="Visit">Visit</option>
+                <option value="Call">Call</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Product <span>*</span></label>
+            <select id="f_product" required>
+                <option value="">-- Select Product --</option>
+                <option value="SBL">SBL</option>
+                <option value="BL">BL</option>
+            </select>
+        </div>
+
         <div class="section-title">Sector &amp; Business Details</div>
         <div class="form-group">
             <label>Sector <span>*</span></label>
@@ -407,7 +425,10 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
     var btn=document.getElementById('submitBtn');btn.textContent='⏳ Submitting…';btn.disabled=true;
     var p=new URLSearchParams({action:'submit',date:document.getElementById('f_date').value,
         branch:document.getElementById('f_branch').value,execName:document.getElementById('f_execName').value,
-        empCode:document.getElementById('f_empCode').value,sector:sectorSel.value,
+        empCode:document.getElementById('f_empCode').value,
+        activity:document.getElementById('f_activity').value,
+        product:document.getElementById('f_product').value,
+        sector:sectorSel.value,
         business:sectorSel.value==='Others'?'':bizSel.value,otherBusiness:otherInput.value.trim(),
         shopName:document.getElementById('f_shopName').value,ownerName:document.getElementById('f_ownerName').value,
         ownerNumber:document.getElementById('f_ownerNumber').value,status:document.getElementById('f_status').value,
