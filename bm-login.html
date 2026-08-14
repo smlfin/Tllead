@@ -83,9 +83,16 @@
 
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
-        // Simple branch-specific password format: BRANCHNAME@123
-        // Example: KUNNAMKULAM@123
-        function branchPassword(branch) { return `${branch}@123`; }
+        // Branch-specific BM passwords: short branch code + two digits.
+        const BRANCH_PASSWORDS = {
+            KUNNAMKULAM: 'knklm@96', PARAVOOR: 'prvr@58', HARIPPAD: 'hrpd@42',
+            KATTAPPANA: 'ktpna@73', MATTANCHERY: 'mtchy@61', PATHANAMTHITTA: 'pthta@84',
+            KOTTAYAM: 'ktyam@35', ALATHUR: 'althr@27', ANGAMALY: 'anmly@69',
+            CHENGANNOOR: 'chngr@46', EDAPPALLY: 'edply@52', KODUVAYOOR: 'kdvyr@91',
+            MAVELIKKARA: 'mvlkr@38', MUVATTUPUZHA: 'mvtpz@64', NEDUMKANDOM: 'ndkdm@25',
+            NENMARA: 'nnmra@77', THIRUVILAMALAI: 'tvlmi@49', KUZHALMANNAM: 'kzlm@83',
+            THIRUVALLA: 'trvla@56', THODUPUZHA: 'tdpzh@32', PERUMBAVOOR: 'prbvr@88'
+        };
         let selectedBranch = '';
         let rawData = [];
         let visibleRows = [];
@@ -118,7 +125,7 @@
             const password = document.getElementById('password').value;
             const error = document.getElementById('loginError'); error.style.display = 'none';
             if (!branch || !password) return showError('Select a branch and enter the password.');
-            if (password !== branchPassword(branch)) return showError('Incorrect password.');
+            if (password.toLowerCase() !== BRANCH_PASSWORDS[branch]) return showError('Incorrect password.');
             selectedBranch = branch;
             document.getElementById('loginView').classList.add('hidden');
             document.getElementById('reportView').classList.remove('hidden');
