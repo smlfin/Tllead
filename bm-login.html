@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SML Group — BM Login</title>
+    <style>
+        :root { --blue:#1a73e8; --bg:#f0f2f5; --text:#202124; --muted:#5f6368; --line:#e8eaed; }
+        * { box-sizing:border-box; }
+        body { margin:0; padding:32px 16px; font-family:"Segoe UI",Arial,sans-serif; background:var(--bg); color:var(--text); }
+        .page { max-width:1180px; margin:auto; background:#fff; border-radius:16px; padding:28px; box-shadow:0 4px 20px rgba(0,0,0,.09); }
+        h1 { margin:0; color:var(--blue); font-size:24px; }
+        .sub { color:var(--muted); margin:6px 0 22px; font-size:14px; }
+        .login { max-width:420px; margin:25px auto; }
+        label { display:block; font-weight:600; font-size:14px; margin:16px 0 6px; }
+        input,select { width:100%; padding:11px 12px; border:1px solid #dadce0; border-radius:7px; font:inherit; }
+        input:focus,select:focus { outline:0; border-color:var(--blue); box-shadow:0 0 0 2px rgba(26,115,232,.15); }
+        button { border:0; border-radius:7px; padding:11px 16px; cursor:pointer; font:600 14px inherit; }
+        .primary { width:100%; background:var(--blue); color:#fff; margin-top:20px; }
+        .secondary { background:#f1f3f4; color:#3c4043; }
+        .logout { background:#fff; border:1px solid #dadce0; color:#5f6368; }
+        .error { display:none; margin-top:14px; padding:11px; border-radius:7px; background:#fce8e6; color:#c5221f; font-size:13px; }
+        .hidden { display:none!important; }
+        .top { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .badge { display:inline-block; margin-top:8px; background:#e8f0fe; color:#1557b0; border-radius:99px; padding:6px 12px; font-size:13px; font-weight:700; }
+        .filters { display:grid; grid-template-columns:repeat(2,minmax(160px,220px)) auto; align-items:end; gap:12px; margin:26px 0 20px; padding:16px; background:#f8f9fa; border-radius:10px; }
+        .filters label { margin:0 0 6px; }
+        .summary { display:grid; grid-template-columns:repeat(4,minmax(135px,1fr)); gap:12px; margin:18px 0; }
+        .card { border:1px solid var(--line); border-radius:9px; padding:13px; background:#fff; }
+        .card .label { color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:700; letter-spacing:.4px; }
+        .card .value { color:var(--blue); font-size:23px; font-weight:700; margin-top:5px; }
+        .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:9px; }
+        table { width:100%; border-collapse:collapse; min-width:780px; font-size:13px; }
+        th { background:var(--blue); color:#fff; text-align:left; padding:10px; white-space:nowrap; }
+        td { padding:10px; border-bottom:1px solid var(--line); vertical-align:top; }
+        tr:nth-child(even) td { background:#f8f9fa; }
+        .section-title { font-size:16px; font-weight:700; margin:24px 0 9px; }
+        .duplicate { display:inline-block; background:#fce8e6; color:#c5221f; border-radius:12px; padding:3px 9px; font-size:12px; font-weight:700; cursor:pointer; }
+        .none { color:var(--muted); }
+        .empty { padding:35px; text-align:center; color:var(--muted); }
+        .modal { display:none; position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.48); align-items:center; justify-content:center; padding:16px; }
+        .modal-box { width:min(780px,100%); max-height:80vh; overflow:auto; background:#fff; border-radius:12px; padding:20px; }
+        .modal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .modal h2 { margin:0; font-size:18px; }
+        .close { background:none; font-size:25px; color:var(--muted); padding:0 6px; }
+        .history { margin:16px 0 0; min-width:620px; }
+        @media (max-width:650px) { body{padding:12px;} .page{padding:18px;} .filters{grid-template-columns:1fr;} .summary{grid-template-columns:repeat(2,1fr);} }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section id="loginView" class="login">
+            <h1>BM Login</h1>
+            <p class="sub">View Daily Performance Insight for one branch.</p>
+            <label for="branch">Branch</label>
+            <select id="branch">
+                <option value="">-- Select Branch --</option>
+                <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option><option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option><option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option><option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option><option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option><option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option><option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
+            </select>
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="Enter BM password" onkeydown="if(event.key==='Enter') login()">
+            <button class="primary" onclick="login()">Login</button>
+            <div class="error" id="loginError"></div>
+        </section>
+
+        <section id="reportView" class="hidden">
+            <div class="top">
+                <div><h1>Daily Performance Insight</h1><span class="badge" id="branchBadge"></span></div>
+                <button class="logout" onclick="logout()">Logout</button>
+            </div>
+            <div class="filters">
+                <div><label for="fromDate">From date</label><input id="fromDate" type="date"></div>
+                <div><label for="toDate">To date</label><input id="toDate" type="date"></div>
+                <button class="secondary" onclick="renderReport()">Apply range</button>
+            </div>
+            <div id="reportContent"></div>
+        </section>
+    </main>
+
+    <div class="modal" id="modal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box"><div class="modal-head"><h2 id="modalTitle">Duplicate history</h2><button class="close" onclick="closeModal()">×</button></div><div id="modalContent"></div></div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
+        // Simple branch-specific password format: BRANCHNAME@123
+        // Example: KUNNAMKULAM@123
+        function branchPassword(branch) { return `${branch}@123`; }
+        let selectedBranch = '';
+        let rawData = [];
+        let visibleRows = [];
+
+        function escapeHtml(value) { return String(value ?? '—').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+        function normalizeDate(raw) {
+            if (!raw) return '';
+            const s = String(raw).trim();
+            // Keep plain YYYY-MM-DD values untouched. Google Sheets returns
+            // timestamp values in UTC, however, so those must be formatted in
+            // the business timezone; reading only the ISO date part shifts an
+            // Indian midnight entry back by one day.
+            let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+            m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+            m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+            const d = new Date(s);
+            if (isNaN(d)) return '';
+            const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d);
+            const get = type => parts.find(p => p.type === type).value;
+            return `${get('year')}-${get('month')}-${get('day')}`;
+        }
+        function displayDate(raw) { const d = normalizeDate(raw); return d ? d.split('-').reverse().join('/') : '—'; }
+        function activity(row) { return String(row.activity || '').trim() || 'Visit'; }
+        function isDuplicate(row) { return String(row.duplicate || '').trim().toLowerCase() === 'yes'; }
+        function phone(row) { const n = String(row.ownernumber || '').replace(/\D/g,''); return n.length >= 10 ? n.slice(-10) : n; }
+        function dateInputToday() { return new Date().toISOString().slice(0,10); }
+
+        async function login() {
+            const branch = document.getElementById('branch').value;
+            const password = document.getElementById('password').value;
+            const error = document.getElementById('loginError'); error.style.display = 'none';
+            if (!branch || !password) return showError('Select a branch and enter the password.');
+            if (password !== branchPassword(branch)) return showError('Incorrect password.');
+            selectedBranch = branch;
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('reportView').classList.remove('hidden');
+            document.getElementById('branchBadge').textContent = '📍 ' + branch;
+            document.getElementById('fromDate').value = dateInputToday();
+            document.getElementById('toDate').value = dateInputToday();
+            document.getElementById('reportContent').innerHTML = '<div class="empty">Loading branch data…</div>';
+            try {
+                const response = await fetch(SCRIPT_URL + '?action=getData');
+                const text = await response.text(); rawData = JSON.parse(text);
+                if (!Array.isArray(rawData)) throw new Error(rawData.error || 'Unexpected server response');
+                renderReport();
+            } catch (error) { document.getElementById('reportContent').innerHTML = `<div class="error" style="display:block">Could not load data: ${escapeHtml(error.message)}</div>`; }
+        }
+        function showError(message) { const e = document.getElementById('loginError'); e.textContent = message; e.style.display = 'block'; }
+        function logout() { selectedBranch=''; rawData=[]; document.getElementById('password').value=''; document.getElementById('reportView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); }
+
+        function renderReport() {
+            const from = document.getElementById('fromDate').value, to = document.getElementById('toDate').value;
+            if (!from || !to) return alert('Select both dates.');
+            if (from > to) return alert('The From date cannot be after the To date.');
+            visibleRows = rawData.filter(r => String(r.branch || '').trim().toUpperCase() === selectedBranch && normalizeDate(r.date || r.visitdate) >= from && normalizeDate(r.date || r.visitdate) <= to);
+            const visits = visibleRows.filter(r => activity(r).toLowerCase() !== 'call').length;
+            const calls = visibleRows.filter(r => activity(r).toLowerCase() === 'call').length;
+            const duplicates = visibleRows.filter(isDuplicate).length;
+            let html = `<div class="summary"><div class="card"><div class="label">Visits</div><div class="value">${visits}</div></div><div class="card"><div class="label">Calls</div><div class="value">${calls}</div></div><div class="card"><div class="label">Total leads</div><div class="value">${visibleRows.length}</div></div><div class="card"><div class="label">Duplicate leads</div><div class="value">${duplicates}</div></div></div>`;
+            if (!visibleRows.length) { document.getElementById('reportContent').innerHTML = html + '<div class="empty">No lead records found for this date range.</div>'; return; }
+            const summary = {};
+            visibleRows.forEach(r => { const key=(r.empcode || 'N/A').toString().trim().toUpperCase(); if(!summary[key]) summary[key]={name:r.execname||'Unknown',visits:0,calls:0,dups:0}; if(activity(r).toLowerCase()==='call') summary[key].calls++; else summary[key].visits++; if(isDuplicate(r)) summary[key].dups++; });
+            html += '<div class="section-title">Executive performance</div><div class="table-wrap"><table><thead><tr><th>Executive Name (Emp Code)</th><th>Visits</th><th>Calls</th><th>Total</th><th>Duplicate Phones</th></tr></thead><tbody>';
+            Object.entries(summary).forEach(([code,s]) => { const dup=s.dups ? `<span class="duplicate" onclick="showDuplicates('${escapeJs(code)}')">⚠ ${s.dups}</span>` : '<span class="none">—</span>'; html += `<tr><td><strong>${escapeHtml(s.name)}</strong> (${escapeHtml(code)})</td><td>${s.visits}</td><td>${s.calls}</td><td>${s.visits+s.calls}</td><td>${dup}</td></tr>`; });
+            html += '</tbody></table></div><div class="section-title">Lead details</div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Product</th><th>Shop Name</th><th>Owner Name</th><th>Owner Number</th><th>Feedback</th><th>Duplicate</th></tr></thead><tbody>';
+            visibleRows.slice().sort((a,b) => normalizeDate(b.date||b.visitdate).localeCompare(normalizeDate(a.date||a.visitdate))).forEach(r => { html += `<tr><td>${displayDate(r.date||r.visitdate)}</td><td>${escapeHtml(activity(r))}</td><td>${escapeHtml(r.product)}</td><td>${escapeHtml(r.shopname)}</td><td>${escapeHtml(r.ownername)}</td><td>${escapeHtml(r.ownernumber)}</td><td>${escapeHtml(r.feedback)}</td><td>${isDuplicate(r) ? '<span class="duplicate">Yes</span>' : '<span class="none">No</span>'}</td></tr>`; });
+            document.getElementById('reportContent').innerHTML = html + '</tbody></table></div>';
+        }
+        function escapeJs(value) { return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+        function showDuplicates(code) {
+            const selected = visibleRows.filter(r => String(r.empcode || 'N/A').trim().toUpperCase() === code && isDuplicate(r));
+            const history = []; const seen = new Set();
+            selected.forEach(r => { const p=phone(r); rawData.filter(x => p && phone(x)===p).forEach(x => { const key=[p,normalizeDate(x.date||x.visitdate),x.ownername,x.shopname].join('|'); if(!seen.has(key)){seen.add(key);history.push(x);} }); });
+            document.getElementById('modalTitle').textContent = `Duplicate history — ${code}`;
+            let html = '<div class="table-wrap"><table class="history"><thead><tr><th>Date</th><th>Branch</th><th>Activity</th><th>Product</th><th>Shop Name</th><th>Owner Name</th><th>Owner Number</th><th>Feedback</th></tr></thead><tbody>';
+            history.sort((a,b)=>normalizeDate(a.date||a.visitdate).localeCompare(normalizeDate(b.date||b.visitdate))).forEach(r => { html += `<tr><td>${displayDate(r.date||r.visitdate)}</td><td>${escapeHtml(r.branch)}</td><td>${escapeHtml(activity(r))}</td><td>${escapeHtml(r.product)}</td><td>${escapeHtml(r.shopname)}</td><td>${escapeHtml(r.ownername)}</td><td>${escapeHtml(r.ownernumber)}</td><td>${escapeHtml(r.feedback)}</td></tr>`; });
+            document.getElementById('modalContent').innerHTML = html + '</tbody></table></div>';
+            document.getElementById('modal').style.display='flex';
+        }
+        function closeModal() { document.getElementById('modal').style.display='none'; }
+    </script>
+</body>
+</html>
