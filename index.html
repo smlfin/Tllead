@@ -150,6 +150,7 @@
     <button class="tab-btn active" onclick="switchTab('leads')">📋 Lead Entry</button>
     <button class="tab-btn" onclick="switchTab('commitment')">🎯 Commitment</button>
     <button class="tab-btn" onclick="switchTab('admin')">🛡️ Admin MIS</button>
+    <button class="tab-btn" onclick="switchTab('sbl')">🏪 SBL</button>
     <button class="tab-btn" onclick="window.location.href='bm-login.html'">👤 BM Login</button>
 </div>
 
@@ -365,12 +366,74 @@
 </div>
 </div>
 
+<!-- ═══════════════════════════════════════
+     TAB 4 — SBL REPORT
+═══════════════════════════════════════ -->
+<div id="tab-sbl" class="tab-panel">
+<div class="container-wide">
+    <h2>🏪 SBL Report</h2>
+
+    <!-- SBL Login -->
+    <div id="sbl-login">
+        <div class="login-box">
+            <div class="section-title">SBL Report Access</div>
+            <div class="login-form-wrap" id="sbl-login-form">
+                <div class="form-group"><label>Password</label><input type="password" id="sbl_password" placeholder="Enter SBL report password" onkeydown="if(event.key==='Enter')doSblLogin()"></div>
+                <button class="submit-btn" onclick="doSblLogin()">🔐 View SBL Report</button>
+                <div id="sblLoginErr" class="errorMsg"></div>
+            </div>
+            <div class="login-anim-wrap" id="sbl-spinner"><div class="spinner-ring"></div><div class="spinner-text">Verifying password…</div></div>
+            <div class="login-anim-wrap" id="sbl-success"><div class="success-circle">✓</div><div class="spinner-text">Access granted! Loading SBL data…</div></div>
+        </div>
+    </div>
+
+    <!-- SBL Report Screen -->
+    <div id="sbl-data" style="display:none">
+        <div class="report-header">
+            <span class="branch-badge">🏪 SBL Leads</span>
+            <button class="logout-btn" onclick="doSblLogout()">Logout</button>
+        </div>
+
+        <div class="section-title" style="margin-top:4px">Filters</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
+            <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0">
+                <label>Branch</label>
+                <select id="sbl_branch">
+                    <option value="All">All Branches</option>
+                    <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option>
+                    <option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option>
+                    <option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option>
+                    <option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option>
+                    <option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option>
+                    <option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option>
+                    <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0">
+                <label>From Date</label>
+                <input type="date" id="sbl_from">
+            </div>
+            <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0">
+                <label>To Date</label>
+                <input type="date" id="sbl_to">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+                <button class="submit-btn" style="margin-top:0;white-space:nowrap;padding:11px 18px" onclick="renderSblReport()">Apply</button>
+            </div>
+        </div>
+
+        <div id="sbl-content"><div class="loading-spinner">⏳ Loading…</div></div>
+    </div>
+</div>
+</div>
+
 <script>
 /* ═══════════════════════════════════
    CONFIG — update GAS URL if redeployed
 ═══════════════════════════════════ */
 const GAS_URL    = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
 const ADMIN_PASS = 'sml@123'; // ← change to your admin password
+const SBL_PASS   = 'SBL123'; // ← password for the SBL report tab
 
 /* ═══════════════════════════════════
    TAB SWITCHING
@@ -379,7 +442,7 @@ function switchTab(t) {
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('tab-'+t).classList.add('active');
-    var idx = {leads:0,commitment:1,admin:2}[t];
+    var idx = {leads:0,commitment:1,admin:2,sbl:3}[t];
     document.querySelectorAll('.tab-btn')[idx].classList.add('active');
 }
 function switchSubTab(s) {
@@ -545,6 +608,117 @@ function doAdminLogout(){
     document.getElementById('a_password').value='';
     document.getElementById('adm-mis-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';
     showConsolidated();
+}
+
+/* ═══════════════════════════════════
+   SBL REPORT — LOGIN + FETCH + RENDER
+═══════════════════════════════════ */
+var sblRawData=null;
+function sblAnim(state){
+    document.getElementById('sbl-login-form').classList.toggle('fading',state!=='form');
+    document.getElementById('sbl-spinner').classList.toggle('active',state==='spin');
+    document.getElementById('sbl-success').classList.toggle('active',state==='ok');
+}
+function doSblLogin(){
+    var pass=document.getElementById('sbl_password').value.trim(),
+        err=document.getElementById('sblLoginErr');
+    err.style.display='none';
+    if(!pass){err.textContent='❌ Please enter the password.';err.style.display='block';return;}
+    sblAnim('spin');
+    setTimeout(function(){
+        if(pass===SBL_PASS){
+            sblAnim('ok');
+            setTimeout(function(){
+                sblAnim('form');
+                document.getElementById('sbl-login').style.display='none';
+                document.getElementById('sbl-data').style.display='block';
+                loadSblData();
+            },900);
+        } else {sblAnim('form');err.textContent='❌ Incorrect password.';err.style.display='block';}
+    },800);
+}
+function doSblLogout(){
+    document.getElementById('sbl-login').style.display='block';
+    document.getElementById('sbl-data').style.display='none';
+    document.getElementById('sbl_password').value='';
+    document.getElementById('sbl-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';
+    sblRawData=null;
+}
+function loadSblData(){
+    document.getElementById('sbl-content').innerHTML='<div class="loading-spinner">⏳ Fetching SBL leads…</div>';
+    fetch(GAS_URL+'?'+new URLSearchParams({action:'getData'}),{method:'GET',mode:'cors'})
+    .then(function(r){return r.json();})
+    .then(function(data){
+        if(data && data.error) throw new Error(data.error);
+        sblRawData=data;
+        renderSblReport();
+    })
+    .catch(function(e){document.getElementById('sbl-content').innerHTML='<div class="errorMsg" style="display:block">❌ '+e.message+'</div>';});
+}
+function sblFmtDate(raw){
+    if(!raw) return '—';
+    var s=raw.toString().trim();
+    var iso=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(iso) return iso[3]+'/'+iso[2]+'/'+iso[1];
+    var dmy=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(dmy) return dmy[0].slice(0,10);
+    var d=new Date(s);
+    if(!isNaN(d)) return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    return s;
+}
+function sblToISO(raw){
+    if(!raw) return '';
+    var s=raw.toString().trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    var dmy=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(dmy) return dmy[3]+'-'+dmy[2]+'-'+dmy[1];
+    var d=new Date(s);
+    if(!isNaN(d)) return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return '';
+}
+function renderSblReport(){
+    if(!sblRawData){document.getElementById('sbl-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';return;}
+    var branch=document.getElementById('sbl_branch').value;
+    var from=document.getElementById('sbl_from').value;
+    var to=document.getElementById('sbl_to').value;
+
+    var rows=sblRawData.filter(function(d){
+        var product=(d.product||'').toString().trim().toUpperCase();
+        if(product!=='SBL') return false;
+        if(branch!=='All' && (d.branch||'')!==branch) return false;
+        var iso=sblToISO(d.date||d.visitdate);
+        if(from && (!iso || iso<from)) return false;
+        if(to && (!iso || iso>to)) return false;
+        return true;
+    });
+
+    rows.sort(function(a,b){return sblToISO(b.date||b.visitdate).localeCompare(sblToISO(a.date||a.visitdate));});
+
+    var html='<div class="metric-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px">'
+        +mCard('SBL Leads',fmt(rows.length),branch==='All'?'All Branches':branch,null)
+        +'</div>';
+
+    if(rows.length===0){
+        html+='<p style="color:#70757a;text-align:center;padding:30px 0;font-size:14px">No SBL leads found for the selected filters.</p>';
+    } else {
+        html+='<div class="tbl-wrap"><table class="rt">';
+        html+='<tr><th>Date</th><th>Branch</th><th>Exec Name</th><th>Activity</th>'
+            +'<th>Shop Name</th><th>Owner Name</th><th>Owner Number</th><th>Feedback</th></tr>';
+        rows.forEach(function(r){
+            html+='<tr>'
+                +'<td>'+sblFmtDate(r.date||r.visitdate)+'</td>'
+                +'<td>'+(r.branch||'—')+'</td>'
+                +'<td>'+(r.execname||'—')+'</td>'
+                +'<td>'+(r.activity||'Visit')+'</td>'
+                +'<td>'+(r.shopname||'—')+'</td>'
+                +'<td>'+(r.ownername||'—')+'</td>'
+                +'<td>'+(r.ownernumber||'—')+'</td>'
+                +'<td style="white-space:normal;text-align:left;max-width:260px">'+(r.feedback||'—')+'</td>'
+                +'</tr>';
+        });
+        html+='</table></div>';
+    }
+    document.getElementById('sbl-content').innerHTML=html;
 }
 
 /* ═══════════════════════════════════
