@@ -103,6 +103,14 @@
         .sf-pos   { color:#34a853; font-weight:600; }
         .sf-neg   { color:#ea4335; font-weight:600; }
 
+        /* ── SBL DASHBOARD CHIPS ── */
+        .chip-wrap { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 6px; }
+        .chip { padding:6px 13px; border-radius:16px; font-size:12px; font-weight:700; border:1px solid; white-space:nowrap; }
+        .chip-active   { background:#e6f4ea; color:#1e7e34; border-color:#34a853; }
+        .chip-inactive { background:#fce8e6; color:#c5221f; border-color:#ea4335; }
+        .dl-btn { background:#1a73e8; color:white; border:1px solid #1a73e8; }
+        .dl-btn:hover { background:#1557b0; }
+
         /* ── ADMIN MIS TABLE ── */
         .mis-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:14px; }
         table.mis { width:100%; border-collapse:collapse; font-size:12px; min-width:900px; }
@@ -394,35 +402,48 @@
             <button class="logout-btn" onclick="doSblLogout()">Logout</button>
         </div>
 
-        <div class="section-title" style="margin-top:4px">Filters</div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
-            <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0">
-                <label>Branch</label>
-                <select id="sbl_branch">
-                    <option value="All">All Branches</option>
-                    <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option>
-                    <option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option>
-                    <option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option>
-                    <option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option>
-                    <option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option>
-                    <option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option>
-                    <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
-                </select>
-            </div>
-            <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0">
-                <label>From Date</label>
-                <input type="date" id="sbl_from">
-            </div>
-            <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0">
-                <label>To Date</label>
-                <input type="date" id="sbl_to">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-                <button class="submit-btn" style="margin-top:0;white-space:nowrap;padding:11px 18px" onclick="renderSblReport()">Apply</button>
-            </div>
+        <div class="sub-tab-bar">
+            <button class="sub-tab-btn active" onclick="switchSblSubTab('dash')">📊 Dashboard</button>
+            <button class="sub-tab-btn" onclick="switchSblSubTab('detail')">📋 Detailed Report</button>
         </div>
 
-        <div id="sbl-content"><div class="loading-spinner">⏳ Loading…</div></div>
+        <!-- Dashboard (default landing view) -->
+        <div id="sbl-sub-dash" class="sub-panel active">
+            <div id="sbl-dashboard-content"><div class="loading-spinner">⏳ Loading…</div></div>
+        </div>
+
+        <!-- Detailed report (only populated once dates are selected + Applied) -->
+        <div id="sbl-sub-detail" class="sub-panel">
+            <div class="section-title" style="margin-top:4px">Filters</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
+                <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0">
+                    <label>Branch</label>
+                    <select id="sbl_branch">
+                        <option value="All">All Branches</option>
+                        <option>KUNNAMKULAM</option><option>PARAVOOR</option><option>HARIPPAD</option>
+                        <option>KATTAPPANA</option><option>MATTANCHERY</option><option>PATHANAMTHITTA</option>
+                        <option>KOTTAYAM</option><option>ALATHUR</option><option>ANGAMALY</option>
+                        <option>CHENGANNOOR</option><option>EDAPPALLY</option><option>KODUVAYOOR</option>
+                        <option>MAVELIKKARA</option><option>MUVATTUPUZHA</option><option>NEDUMKANDOM</option>
+                        <option>NENMARA</option><option>THIRUVILAMALAI</option><option>KUZHALMANNAM</option>
+                        <option>THIRUVALLA</option><option>THODUPUZHA</option><option>PERUMBAVOOR</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0">
+                    <label>From Date</label>
+                    <input type="date" id="sbl_from">
+                </div>
+                <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0">
+                    <label>To Date</label>
+                    <input type="date" id="sbl_to">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <button class="submit-btn" style="margin-top:0;white-space:nowrap;padding:11px 18px" onclick="renderSblReport()">Apply</button>
+                </div>
+            </div>
+            <p class="field-hint" style="margin-bottom:10px">💡 Select both <b>From</b> and <b>To</b> dates and tap <b>Apply</b> — entries aren't listed by default.</p>
+            <div id="sbl-content"><p style="color:#70757a;text-align:center;padding:30px 0;font-size:14px">📅 Select a <b>From</b> and <b>To</b> date, then tap <b>Apply</b> to view detailed entries.</p></div>
+        </div>
     </div>
 </div>
 </div>
@@ -614,6 +635,8 @@ function doAdminLogout(){
    SBL REPORT — LOGIN + FETCH + RENDER
 ═══════════════════════════════════ */
 var sblRawData=null;
+var sblLastRows=null;
+var sblDashboardData=null;
 function sblAnim(state){
     document.getElementById('sbl-login-form').classList.toggle('fading',state!=='form');
     document.getElementById('sbl-spinner').classList.toggle('active',state==='spin');
@@ -632,6 +655,7 @@ function doSblLogin(){
                 sblAnim('form');
                 document.getElementById('sbl-login').style.display='none';
                 document.getElementById('sbl-data').style.display='block';
+                switchSblSubTab('dash');
                 loadSblData();
             },900);
         } else {sblAnim('form');err.textContent='❌ Incorrect password.';err.style.display='block';}
@@ -641,19 +665,131 @@ function doSblLogout(){
     document.getElementById('sbl-login').style.display='block';
     document.getElementById('sbl-data').style.display='none';
     document.getElementById('sbl_password').value='';
-    document.getElementById('sbl-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';
+    document.getElementById('sbl-dashboard-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';
+    document.getElementById('sbl_from').value='';
+    document.getElementById('sbl_to').value='';
+    document.getElementById('sbl_branch').value='All';
+    document.getElementById('sbl-content').innerHTML='<p style="color:#70757a;text-align:center;padding:30px 0;font-size:14px">📅 Select a <b>From</b> and <b>To</b> date, then tap <b>Apply</b> to view detailed entries.</p>';
+    switchSblSubTab('dash');
     sblRawData=null;
+    sblLastRows=null;
+    sblDashboardData=null;
+}
+function switchSblSubTab(tab){
+    document.querySelectorAll('#tab-sbl .sub-panel').forEach(function(p){p.classList.remove('active');});
+    document.querySelectorAll('#tab-sbl .sub-tab-btn').forEach(function(b){b.classList.remove('active');});
+    document.getElementById('sbl-sub-'+tab).classList.add('active');
+    document.querySelectorAll('#tab-sbl .sub-tab-btn')[tab==='dash'?0:1].classList.add('active');
 }
 function loadSblData(){
-    document.getElementById('sbl-content').innerHTML='<div class="loading-spinner">⏳ Fetching SBL leads…</div>';
+    document.getElementById('sbl-dashboard-content').innerHTML='<div class="loading-spinner">⏳ Fetching SBL leads…</div>';
     fetch(GAS_URL+'?'+new URLSearchParams({action:'getData'}),{method:'GET',mode:'cors'})
     .then(function(r){return r.json();})
     .then(function(data){
         if(data && data.error) throw new Error(data.error);
         sblRawData=data;
-        renderSblReport();
+        renderSblDashboard();
+        renderSblReport(); // resets detail panel to its "select dates" prompt
     })
-    .catch(function(e){document.getElementById('sbl-content').innerHTML='<div class="errorMsg" style="display:block">❌ '+e.message+'</div>';});
+    .catch(function(e){document.getElementById('sbl-dashboard-content').innerHTML='<div class="errorMsg" style="display:block">❌ '+e.message+'</div>';});
+}
+function sblMonthBounds(){
+    var now=new Date();
+    var y=now.getFullYear(), m=now.getMonth();
+    var start=y+'-'+String(m+1).padStart(2,'0')+'-01';
+    var lastDay=new Date(y,m+1,0).getDate();
+    var end=y+'-'+String(m+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+    return {start:start,end:end};
+}
+function renderSblDashboard(){
+    if(!sblRawData){document.getElementById('sbl-dashboard-content').innerHTML='<div class="loading-spinner">⏳ Loading…</div>';return;}
+    var mb=sblMonthBounds();
+    var branches=Array.from(document.querySelectorAll('#sbl_branch option')).map(function(o){return o.value;}).filter(function(v){return v!=='All';});
+    var counts={};
+    branches.forEach(function(b){counts[b]=0;});
+    var totalThisMonth=0;
+    sblRawData.forEach(function(d){
+        var product=(d.product||'').toString().trim().toUpperCase();
+        if(product!=='SBL') return;
+        var iso=sblToISO(d.date||d.visitdate);
+        if(!iso || iso<mb.start || iso>mb.end) return;
+        var br=(d.branch||'').toString().trim();
+        counts[br]=(counts[br]||0)+1;
+        totalThisMonth++;
+    });
+    var active=[], inactive=[];
+    Object.keys(counts).forEach(function(b){
+        if(counts[b]>0) active.push({branch:b,count:counts[b]});
+        else inactive.push(b);
+    });
+    active.sort(function(a,b){return b.count-a.count;});
+    inactive.sort();
+
+    sblDashboardData={active:active,inactive:inactive,month:mb,total:totalThisMonth};
+
+    var monthLabel=new Date(mb.start+'T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+
+    var h='';
+    h+='<div class="metric-cards">'
+      +mCard('Total SBL Leads',fmt(totalThisMonth),monthLabel,null)
+      +mCard('Active Branches',fmt(active.length),'out of '+branches.length,null)
+      +mCard('Inactive Branches',fmt(inactive.length),'no leads yet',null)
+      +'</div>';
+
+    h+='<div class="report-header" style="margin-top:2px">'
+      +'<div class="section-title" style="margin:0">✅ Active Branches — '+monthLabel+'</div>'
+      +'<button class="logout-btn dl-btn" onclick="downloadSblSummary()">⬇️ Download Summary</button>'
+      +'</div>';
+    if(active.length===0){
+        h+='<p style="color:#70757a;text-align:center;padding:16px 0;font-size:13px">No branches have SBL leads yet this month.</p>';
+    } else {
+        h+='<div class="tbl-wrap"><table class="rt"><tr><th>Branch</th><th>Leads</th></tr>';
+        active.forEach(function(a){
+            h+='<tr><td>'+a.branch+'</td><td>'+fmt(a.count)+'</td></tr>';
+        });
+        h+='</table></div>';
+    }
+
+    h+='<div class="section-title">🚫 Inactive Branches (No Leads This Month)</div>';
+    if(inactive.length===0){
+        h+='<p style="color:#70757a;text-align:center;padding:16px 0;font-size:13px">All branches have activity this month. 🎉</p>';
+    } else {
+        h+='<div class="chip-wrap">'+inactive.map(function(b){return '<span class="chip chip-inactive">'+b+'</span>';}).join('')+'</div>';
+    }
+
+    document.getElementById('sbl-dashboard-content').innerHTML=h;
+}
+function downloadCSV(rows,filename){
+    var csv=rows.map(function(r){
+        return r.map(function(v){
+            var s=(v===undefined||v===null)?'':String(v);
+            if(s.indexOf(',')>-1||s.indexOf('"')>-1||s.indexOf('\n')>-1){ s='"'+s.replace(/"/g,'""')+'"'; }
+            return s;
+        }).join(',');
+    }).join('\r\n');
+    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+function downloadSblSummary(){
+    if(!sblDashboardData){return;}
+    var rows=[['Branch','Status','Leads (This Month)']];
+    sblDashboardData.active.forEach(function(a){rows.push([a.branch,'Active',a.count]);});
+    sblDashboardData.inactive.forEach(function(b){rows.push([b,'Inactive',0]);});
+    downloadCSV(rows,'SBL_Branch_Summary_'+sblDashboardData.month.start+'.csv');
+}
+function downloadSblEntries(){
+    if(!sblLastRows || sblLastRows.length===0){ alert('No entries to download — apply a date range first.'); return; }
+    var rows=[['Date','Branch','Exec Name','Activity','Shop Name','Owner Name','Owner Number','Feedback']];
+    sblLastRows.forEach(function(r){
+        rows.push([sblFmtDate(r.date||r.visitdate),r.branch||'',r.execname||'',r.activity||'Visit',r.shopname||'',r.ownername||'',r.ownernumber||'',r.feedback||'']);
+    });
+    var from=document.getElementById('sbl_from').value||'all',
+        to=document.getElementById('sbl_to').value||'all';
+    downloadCSV(rows,'SBL_Entries_'+from+'_to_'+to+'.csv');
 }
 function sblFmtDate(raw){
     if(!raw) return '—';
@@ -682,6 +818,12 @@ function renderSblReport(){
     var from=document.getElementById('sbl_from').value;
     var to=document.getElementById('sbl_to').value;
 
+    if(!from || !to){
+        sblLastRows=null;
+        document.getElementById('sbl-content').innerHTML='<p style="color:#70757a;text-align:center;padding:30px 0;font-size:14px">📅 Select a <b>From</b> and <b>To</b> date, then tap <b>Apply</b> to view detailed entries.</p>';
+        return;
+    }
+
     var rows=sblRawData.filter(function(d){
         var product=(d.product||'').toString().trim().toUpperCase();
         if(product!=='SBL') return false;
@@ -693,9 +835,13 @@ function renderSblReport(){
     });
 
     rows.sort(function(a,b){return sblToISO(b.date||b.visitdate).localeCompare(sblToISO(a.date||a.visitdate));});
+    sblLastRows=rows;
 
-    var html='<div class="metric-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px">'
+    var html='<div class="report-header" style="margin-top:0">'
+        +'<div class="metric-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:0">'
         +mCard('SBL Leads',fmt(rows.length),branch==='All'?'All Branches':branch,null)
+        +'</div>'
+        +'<button class="logout-btn dl-btn" onclick="downloadSblEntries()">⬇️ Download CSV</button>'
         +'</div>';
 
     if(rows.length===0){
