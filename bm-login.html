@@ -44,6 +44,9 @@
         .modal h2 { margin:0; font-size:18px; }
         .close { background:none; font-size:25px; color:var(--muted); padding:0 6px; }
         .history { margin:16px 0 0; min-width:620px; }
+        .history .grp td { background:#fce8e6; color:#c5221f; font-weight:700; border-top:1px solid #f1b8b3; }
+        .history .grp small { font-weight:600; color:#80868b; margin-left:8px; }
+        .history tbody + tbody .grp td { border-top:12px solid #fff; }
         @media (max-width:650px) { body{padding:12px;} .page{padding:18px;} .filters{grid-template-columns:1fr;} .summary{grid-template-columns:repeat(2,1fr);} }
     </style>
 </head>
@@ -164,12 +167,24 @@
         function escapeJs(value) { return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
         function showDuplicates(code) {
             const selected = visibleRows.filter(r => String(r.empcode || 'N/A').trim().toUpperCase() === code && isDuplicate(r));
-            const history = []; const seen = new Set();
-            selected.forEach(r => { const p=phone(r); rawData.filter(x => p && phone(x)===p).forEach(x => { const key=[p,normalizeDate(x.date||x.visitdate),x.ownername,x.shopname].join('|'); if(!seen.has(key)){seen.add(key);history.push(x);} }); });
+            const dateOf = r => normalizeDate(r.date||r.visitdate);
+            const groups = []; const phones = new Set();
+            selected.forEach(r => {
+                const p = phone(r); if (!p || phones.has(p)) return; phones.add(p);
+                const seen = new Set(); const rows = [];
+                rawData.forEach(x => { if (phone(x) !== p) return; const key=[dateOf(x),x.ownername,x.shopname].join('|'); if (!seen.has(key)) { seen.add(key); rows.push(x); } });
+                rows.sort((a,b)=>dateOf(a).localeCompare(dateOf(b)));
+                groups.push({phone:p, rows});
+            });
+            groups.sort((a,b)=>dateOf(b.rows[b.rows.length-1]).localeCompare(dateOf(a.rows[a.rows.length-1])));
             document.getElementById('modalTitle').textContent = `Duplicate history — ${code}`;
-            let html = '<div class="table-wrap"><table class="history"><thead><tr><th>Date</th><th>Branch</th><th>Activity</th><th>Product</th><th>Shop Name</th><th>Owner Name</th><th>Owner Number</th><th>Feedback</th></tr></thead><tbody>';
-            history.sort((a,b)=>normalizeDate(a.date||a.visitdate).localeCompare(normalizeDate(b.date||b.visitdate))).forEach(r => { html += `<tr><td>${displayDate(r.date||r.visitdate)}</td><td>${escapeHtml(r.branch)}</td><td>${escapeHtml(activity(r))}</td><td>${escapeHtml(r.product)}</td><td>${escapeHtml(r.shopname)}</td><td>${escapeHtml(r.ownername)}</td><td>${escapeHtml(r.ownernumber)}</td><td>${escapeHtml(r.feedback)}</td></tr>`; });
-            document.getElementById('modalContent').innerHTML = html + '</tbody></table></div>';
+            let html = '<div class="table-wrap"><table class="history"><thead><tr><th>Date</th><th>Branch</th><th>Activity</th><th>Product</th><th>Owner Name</th><th>Owner Number</th></tr></thead>';
+            groups.forEach((g,i) => {
+                html += `<tbody><tr class="grp"><td colspan="6">Duplicate ${i+1} · ${escapeHtml(g.phone)}<small>${g.rows.length} entries</small></td></tr>`;
+                g.rows.forEach(r => { html += `<tr><td>${displayDate(r.date||r.visitdate)}</td><td>${escapeHtml(r.branch)}</td><td>${escapeHtml(activity(r))}</td><td>${escapeHtml(r.product)}</td><td>${escapeHtml(r.ownername)}</td><td>${escapeHtml(r.ownernumber)}</td></tr>`; });
+                html += '</tbody>';
+            });
+            document.getElementById('modalContent').innerHTML = html + '</table></div>';
             document.getElementById('modal').style.display='flex';
         }
         function closeModal() { document.getElementById('modal').style.display='none'; }
