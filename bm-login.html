@@ -121,6 +121,12 @@
         function activity(row) { return String(row.activity || '').trim() || 'Visit'; }
         function isDuplicate(row) { return String(row.duplicate || '').trim().toLowerCase() === 'yes'; }
         function phone(row) { const n = String(row.ownernumber || '').replace(/\D/g,''); return n.length >= 10 ? n.slice(-10) : n; }
+        function productType(row) {
+            const p = String(row.product || '').trim().toLowerCase();
+            if (/\bsbl\b/.test(p) || /secured business|small business/.test(p)) return 'SBL';
+            if (/\bbl\b/.test(p) || /business loan/.test(p)) return 'BL';
+            return '';
+        }
         function dateInputToday() { return new Date().toISOString().slice(0,10); }
 
         async function login() {
@@ -157,9 +163,9 @@
             let html = `<div class="summary"><div class="card"><div class="label">Visits</div><div class="value">${visits}</div></div><div class="card"><div class="label">Calls</div><div class="value">${calls}</div></div><div class="card"><div class="label">Total leads</div><div class="value">${visibleRows.length}</div></div><div class="card"><div class="label">Duplicate leads</div><div class="value">${duplicates}</div></div></div>`;
             if (!visibleRows.length) { document.getElementById('reportContent').innerHTML = html + '<div class="empty">No lead records found for this date range.</div>'; return; }
             const summary = {};
-            visibleRows.forEach(r => { const key=(r.empcode || 'N/A').toString().trim().toUpperCase(); if(!summary[key]) summary[key]={name:r.execname||'Unknown',visits:0,calls:0,dups:0}; if(activity(r).toLowerCase()==='call') summary[key].calls++; else summary[key].visits++; if(isDuplicate(r)) summary[key].dups++; });
-            html += '<div class="section-title">Executive performance</div><div class="table-wrap"><table><thead><tr><th>Executive Name (Emp Code)</th><th>Visits</th><th>Calls</th><th>Total</th><th>Duplicate Phones</th></tr></thead><tbody>';
-            Object.entries(summary).forEach(([code,s]) => { const dup=s.dups ? `<span class="duplicate" onclick="showDuplicates('${escapeJs(code)}')">⚠ ${s.dups}</span>` : '<span class="none">—</span>'; html += `<tr><td><strong>${escapeHtml(s.name)}</strong> (${escapeHtml(code)})</td><td>${s.visits}</td><td>${s.calls}</td><td>${s.visits+s.calls}</td><td>${dup}</td></tr>`; });
+            visibleRows.forEach(r => { const key=(r.empcode || 'N/A').toString().trim().toUpperCase(); if(!summary[key]) summary[key]={name:r.execname||'Unknown',visits:0,calls:0,dups:0,bl:0,sbl:0,blPh:new Set(),sblPh:new Set()}; const pt=productType(r), ph=phone(r); if(pt==='BL'){summary[key].bl++; if(ph) summary[key].blPh.add(ph);} else if(pt==='SBL'){summary[key].sbl++; if(ph) summary[key].sblPh.add(ph);} if(activity(r).toLowerCase()==='call') summary[key].calls++; else summary[key].visits++; if(isDuplicate(r)) summary[key].dups++; });
+            html += '<div class="section-title">Executive performance</div><div class="table-wrap"><table><thead><tr><th>Executive Name (Emp Code)</th><th>Visits</th><th>Calls</th><th>Total</th><th>BL</th><th>SBL</th><th>Phones Shared (BL &amp; SBL)</th><th>Duplicate Phones</th></tr></thead><tbody>';
+            Object.entries(summary).forEach(([code,s]) => { const dup=s.dups ? `<span class="duplicate" onclick="showDuplicates('${escapeJs(code)}')">⚠ ${s.dups}</span>` : '<span class="none">—</span>'; html += `<tr><td><strong>${escapeHtml(s.name)}</strong> (${escapeHtml(code)})</td><td>${s.visits}</td><td>${s.calls}</td><td>${s.visits+s.calls}</td><td>${s.bl}</td><td>${s.sbl}</td><td>${[...s.blPh].filter(p=>s.sblPh.has(p)).length}</td><td>${dup}</td></tr>`; });
             html += '</tbody></table></div><div class="section-title">Lead details</div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Product</th><th>Shop Name</th><th>Owner Name</th><th>Owner Number</th><th>Feedback</th><th>Duplicate</th></tr></thead><tbody>';
             visibleRows.slice().sort((a,b) => normalizeDate(b.date||b.visitdate).localeCompare(normalizeDate(a.date||a.visitdate))).forEach(r => { html += `<tr><td>${displayDate(r.date||r.visitdate)}</td><td>${escapeHtml(activity(r))}</td><td>${escapeHtml(r.product)}</td><td>${escapeHtml(r.shopname)}</td><td>${escapeHtml(r.ownername)}</td><td>${escapeHtml(r.ownernumber)}</td><td>${escapeHtml(r.feedback)}</td><td>${isDuplicate(r) ? '<span class="duplicate">Yes</span>' : '<span class="none">No</span>'}</td></tr>`; });
             document.getElementById('reportContent').innerHTML = html + '</tbody></table></div>';
