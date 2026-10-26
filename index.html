@@ -223,6 +223,25 @@
         <div class="form-group hidden" id="otherGroup"><label>Specify Business Type <span>*</span></label><input type="text" id="f_otherBusiness" placeholder="Enter business type"></div>
         <div class="form-group"><label>Shop Name <span>*</span></label><input type="text" id="f_shopName" placeholder="e.g. Royal Traders" required></div>
 
+        <div class="section-title">Marketing &amp; Other Product Interest</div>
+        <div class="form-group"><label>Location of Marketing <span>*</span></label><input type="text" id="f_marketLocation" placeholder="Area / town / road where marketed" required></div>
+        <div class="form-group">
+            <label>Interested in Other Products <span>*</span></label>
+            <select id="f_otherProduct" required>
+                <option value="">-- Select --</option>
+                <option>Gold loan</option><option>SBL</option><option>Deposit</option><option>RD</option><option>Not interested</option>
+            </select>
+        </div>
+        <div class="form-group hidden" id="exLoanGroup">
+            <label>Any existing loan with anyone? <span>*</span></label>
+            <select id="f_exLoan">
+                <option value="">-- Select --</option>
+                <option>Yes</option><option>No</option>
+            </select>
+        </div>
+        <div class="form-group hidden" id="exLoanWhereGroup"><label>Existing loan - where? <span>*</span></label><input type="text" id="f_exLoanWhere" placeholder="Bank / NBFC / person"></div>
+        <div class="form-group hidden" id="exLoanAmtGroup"><label>Existing loan amount (₹) <span>*</span></label><input type="number" id="f_exLoanAmount" min="1" inputmode="numeric" placeholder="Outstanding amount"></div>
+
         <div class="section-title">Customer Contact &amp; Status</div>
         <div class="form-group"><label>Owner Name <span>*</span></label><input type="text" id="f_ownerName" required></div>
         <div class="form-group"><label>Owner Number <span>*</span></label><input type="tel" id="f_ownerNumber" inputmode="numeric" pattern="[0-9]{10}" placeholder="10-digit mobile" required></div>
@@ -502,6 +521,22 @@ sectorSel.addEventListener('change',function(){
     else{bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
         (sectorMap[sec]||[]).forEach(function(b){var o=document.createElement('option');o.value=o.textContent=b;bizSel.appendChild(o);});}
 });
+/* ── Marketing / other-product conditional fields ── */
+var otherProdSel=document.getElementById('f_otherProduct'), exLoanSel=document.getElementById('f_exLoan'),
+    exLoanGroup=document.getElementById('exLoanGroup'), exLoanWhereGroup=document.getElementById('exLoanWhereGroup'),
+    exLoanAmtGroup=document.getElementById('exLoanAmtGroup'),
+    exLoanWhere=document.getElementById('f_exLoanWhere'), exLoanAmt=document.getElementById('f_exLoanAmount');
+function updateLoanUI(){
+    var needLoan=(otherProdSel.value==='Gold loan'||otherProdSel.value==='SBL');
+    var hasLoan=needLoan&&exLoanSel.value==='Yes';
+    exLoanGroup.classList.toggle('hidden',!needLoan);exLoanSel.required=needLoan;
+    if(!needLoan)exLoanSel.value='';
+    exLoanWhereGroup.classList.toggle('hidden',!hasLoan);exLoanWhere.required=hasLoan;
+    exLoanAmtGroup.classList.toggle('hidden',!hasLoan);exLoanAmt.required=hasLoan;
+    if(!hasLoan){exLoanWhere.value='';exLoanAmt.value='';}
+}
+otherProdSel.addEventListener('change',updateLoanUI);
+exLoanSel.addEventListener('change',updateLoanUI);
 document.getElementById('leadForm').addEventListener('submit',function(e){
     e.preventDefault();
     document.getElementById('successMsg').style.display='none';document.getElementById('errorMsg').style.display='none';
@@ -517,10 +552,13 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
         business:sectorSel.value==='Others'?'':bizSel.value,otherBusiness:otherInput.value.trim(),
         shopName:document.getElementById('f_shopName').value,ownerName:document.getElementById('f_ownerName').value,
         ownerNumber:document.getElementById('f_ownerNumber').value,status:document.getElementById('f_status').value,
-        feedback:document.getElementById('f_feedback').value,followUp:document.getElementById('f_followUp').value});
+        feedback:document.getElementById('f_feedback').value,followUp:document.getElementById('f_followUp').value,
+        marketLocation:document.getElementById('f_marketLocation').value.trim(),
+        otherProduct:otherProdSel.value,exLoan:exLoanSel.value,
+        exLoanWhere:exLoanWhere.value.trim(),exLoanAmount:exLoanAmt.value});
     fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
     .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();
-        document.getElementById('f_date').valueAsDate=new Date();bizSel.innerHTML='<option value="">-- Select Sector First --</option>';
+        document.getElementById('f_date').valueAsDate=new Date();updateLoanUI();bizSel.innerHTML='<option value="">-- Select Sector First --</option>';
         bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
         btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);})
     .catch(function(err){document.getElementById('errorMsg').textContent='❌ '+err.message;document.getElementById('errorMsg').style.display='block';
