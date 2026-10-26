@@ -232,9 +232,16 @@
                 <option>Gold loan</option><option>SBL</option><option>Deposit</option><option>RD</option><option>Not interested</option>
             </select>
         </div>
-        <div class="form-group hidden" id="exLoanGroup">
+        <div class="form-group hidden" id="notIntGroup">
+            <label>Reason for not interested <span>*</span></label>
+            <select id="f_notIntReason">
+                <option value="">-- Select Reason --</option>
+                <option>Already has with others</option><option>No need now</option><option>Rate / terms</option><option>Trust / awareness</option><option>Other</option>
+            </select>
+        </div>
+        <div class="form-group" id="exLoanGroup">
             <label>Any existing loan with anyone? <span>*</span></label>
-            <select id="f_exLoan">
+            <select id="f_exLoan" required>
                 <option value="">-- Select --</option>
                 <option>Yes</option><option>No</option>
             </select>
@@ -243,7 +250,7 @@
             <label>Existing loan type <span>*</span></label>
             <select id="f_exLoanType">
                 <option value="">-- Select --</option>
-                <option>Gold loan</option><option>SBL</option>
+                <option>Gold loan</option><option>SBL</option><option>Other</option>
             </select>
         </div>
         <div class="form-group hidden" id="exLoanWhereGroup"><label>Existing loan - where? <span>*</span></label><input type="text" id="f_exLoanWhere" placeholder="Bank / NBFC / person"></div>
@@ -529,16 +536,17 @@ sectorSel.addEventListener('change',function(){
         (sectorMap[sec]||[]).forEach(function(b){var o=document.createElement('option');o.value=o.textContent=b;bizSel.appendChild(o);});}
 });
 /* ── Marketing / other-product conditional fields ── */
-var otherProdSel=document.getElementById('f_otherProduct'), exLoanSel=document.getElementById('f_exLoan'),
+var notIntGroup=document.getElementById('notIntGroup'), notIntSel=document.getElementById('f_notIntReason'),
+    otherProdSel=document.getElementById('f_otherProduct'), exLoanSel=document.getElementById('f_exLoan'),
     exLoanGroup=document.getElementById('exLoanGroup'), exLoanWhereGroup=document.getElementById('exLoanWhereGroup'),
     exLoanAmtGroup=document.getElementById('exLoanAmtGroup'),
     exLoanTypeGroup=document.getElementById('exLoanTypeGroup'), exLoanType=document.getElementById('f_exLoanType'),
     exLoanWhere=document.getElementById('f_exLoanWhere'), exLoanAmt=document.getElementById('f_exLoanAmount');
 function updateLoanUI(){
-    var needLoan=(otherProdSel.value==='Gold loan'||otherProdSel.value==='SBL');
-    var hasLoan=needLoan&&exLoanSel.value==='Yes';
-    exLoanGroup.classList.toggle('hidden',!needLoan);exLoanSel.required=needLoan;
-    if(!needLoan)exLoanSel.value='';
+    var notInt=(otherProdSel.value==='Not interested');
+    notIntGroup.classList.toggle('hidden',!notInt);notIntSel.required=notInt;
+    if(!notInt)notIntSel.value='';
+    var hasLoan=(exLoanSel.value==='Yes'); // existing-loan question is always asked
     exLoanTypeGroup.classList.toggle('hidden',!hasLoan);exLoanType.required=hasLoan;
     exLoanWhereGroup.classList.toggle('hidden',!hasLoan);exLoanWhere.required=hasLoan;
     exLoanAmtGroup.classList.toggle('hidden',!hasLoan);exLoanAmt.required=hasLoan;
@@ -563,7 +571,7 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
         ownerNumber:document.getElementById('f_ownerNumber').value,status:document.getElementById('f_status').value,
         feedback:document.getElementById('f_feedback').value,followUp:document.getElementById('f_followUp').value,
         marketLocation:document.getElementById('f_marketLocation').value.trim(),
-        otherProduct:otherProdSel.value,exLoan:exLoanSel.value,exLoanType:exLoanType.value,
+        otherProduct:otherProdSel.value,notIntReason:notIntSel.value,exLoan:exLoanSel.value,exLoanType:exLoanType.value,
         exLoanWhere:exLoanWhere.value.trim(),exLoanAmount:exLoanAmt.value});
     fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
     .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();
