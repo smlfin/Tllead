@@ -239,6 +239,13 @@
                 <option>Yes</option><option>No</option>
             </select>
         </div>
+        <div class="form-group hidden" id="exLoanTypeGroup">
+            <label>Existing loan type <span>*</span></label>
+            <select id="f_exLoanType">
+                <option value="">-- Select --</option>
+                <option>Gold loan</option><option>SBL</option>
+            </select>
+        </div>
         <div class="form-group hidden" id="exLoanWhereGroup"><label>Existing loan - where? <span>*</span></label><input type="text" id="f_exLoanWhere" placeholder="Bank / NBFC / person"></div>
         <div class="form-group hidden" id="exLoanAmtGroup"><label>Existing loan amount (₹) <span>*</span></label><input type="number" id="f_exLoanAmount" min="1" inputmode="numeric" placeholder="Outstanding amount"></div>
 
@@ -525,15 +532,17 @@ sectorSel.addEventListener('change',function(){
 var otherProdSel=document.getElementById('f_otherProduct'), exLoanSel=document.getElementById('f_exLoan'),
     exLoanGroup=document.getElementById('exLoanGroup'), exLoanWhereGroup=document.getElementById('exLoanWhereGroup'),
     exLoanAmtGroup=document.getElementById('exLoanAmtGroup'),
+    exLoanTypeGroup=document.getElementById('exLoanTypeGroup'), exLoanType=document.getElementById('f_exLoanType'),
     exLoanWhere=document.getElementById('f_exLoanWhere'), exLoanAmt=document.getElementById('f_exLoanAmount');
 function updateLoanUI(){
     var needLoan=(otherProdSel.value==='Gold loan'||otherProdSel.value==='SBL');
     var hasLoan=needLoan&&exLoanSel.value==='Yes';
     exLoanGroup.classList.toggle('hidden',!needLoan);exLoanSel.required=needLoan;
     if(!needLoan)exLoanSel.value='';
+    exLoanTypeGroup.classList.toggle('hidden',!hasLoan);exLoanType.required=hasLoan;
     exLoanWhereGroup.classList.toggle('hidden',!hasLoan);exLoanWhere.required=hasLoan;
     exLoanAmtGroup.classList.toggle('hidden',!hasLoan);exLoanAmt.required=hasLoan;
-    if(!hasLoan){exLoanWhere.value='';exLoanAmt.value='';}
+    if(!hasLoan){exLoanType.value='';exLoanWhere.value='';exLoanAmt.value='';}
 }
 otherProdSel.addEventListener('change',updateLoanUI);
 exLoanSel.addEventListener('change',updateLoanUI);
@@ -554,7 +563,7 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
         ownerNumber:document.getElementById('f_ownerNumber').value,status:document.getElementById('f_status').value,
         feedback:document.getElementById('f_feedback').value,followUp:document.getElementById('f_followUp').value,
         marketLocation:document.getElementById('f_marketLocation').value.trim(),
-        otherProduct:otherProdSel.value,exLoan:exLoanSel.value,
+        otherProduct:otherProdSel.value,exLoan:exLoanSel.value,exLoanType:exLoanType.value,
         exLoanWhere:exLoanWhere.value.trim(),exLoanAmount:exLoanAmt.value});
     fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
     .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();
