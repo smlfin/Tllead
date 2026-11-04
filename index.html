@@ -156,6 +156,7 @@
 <!-- ═══════════ MAIN TAB BAR ═══════════ -->
 <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('leads')">📋 Lead Entry</button>
+    <button class="tab-btn" onclick="switchTab('quick')">⚡ Quick Capture</button>
     <button class="tab-btn" onclick="switchTab('commitment')">🎯 Commitment</button>
     <button class="tab-btn" onclick="switchTab('admin')">🛡️ Admin MIS</button>
     <button class="tab-btn" onclick="switchTab('sbl')">🏪 SBL</button>
@@ -171,6 +172,8 @@
     <form id="leadForm" autocomplete="off">
         <div class="section-title">Executive &amp; Branch Info</div>
         <div class="form-group"><label>Date of Visit <span>*</span></label><input type="date" id="f_date" required></div>
+        <div class="form-group"><label>Employee Code <span>*</span></label><input type="text" id="f_empCode" placeholder="Enter employee code" required>
+            <div id="empStatus" class="field-hint" style="font-size:12px;"></div></div>
         <div class="form-group">
             <label>Branch <span>*</span></label>
             <select id="f_branch" required>
@@ -185,7 +188,6 @@
             </select>
         </div>
         <div class="form-group"><label>Executive Name <span>*</span></label><input type="text" id="f_execName" placeholder="Full Name" required></div>
-        <div class="form-group"><label>Employee Code <span>*</span></label><input type="text" id="f_empCode" placeholder="E-XXXX" required></div>
 
         <div class="section-title">Activity &amp; Product</div>
         <div class="form-group">
@@ -274,11 +276,50 @@
         </div>
         <div class="form-group"><label>Feedback <span>*</span></label><textarea id="f_feedback" rows="3" placeholder="Remarks are mandatory" required></textarea></div>
         <div class="form-group"><label>Next Follow Up <span>*</span></label><input type="date" id="f_followUp" required></div>
+        <div class="form-group"><label>Photo (optional)</label>
+            <input type="file" id="f_photo" accept="image/*" onchange="leadPhotoPicked(this)">
+            <img id="f_preview" alt="" style="display:none;max-width:100%;max-height:200px;margin-top:8px;border-radius:6px;border:1px solid #dadce0;">
+            <div id="f_photoSt" class="field-hint"></div>
+        </div>
         <button type="submit" class="submit-btn" id="submitBtn">Submit Lead</button>
     </form>
     <div id="successMsg" class="successMsg">✅ Lead submitted successfully!</div>
     <div id="errorMsg" class="errorMsg">❌ Submission failed. Please try again.</div>
     <div class="footer-link"><a href="report.html">🔐 HO Login (MIS Access)</a></div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     QUICK CAPTURE (field: owner name, number, location, photo)
+═══════════════════════════════════════ -->
+<div id="tab-quick" class="tab-panel">
+<div class="container">
+    <h2>⚡ Quick Capture (Field)</h2>
+    <form id="quickForm" autocomplete="off">
+        <div class="section-title">Executive &amp; Branch</div>
+        <div class="form-group"><label>Branch <span>*</span></label><select id="q_branch" required></select></div>
+        <div class="form-group"><label>Executive Name <span>*</span></label><input type="text" id="q_execName" placeholder="Full Name" required></div>
+        <div class="form-group"><label>Employee Code <span>*</span></label><input type="text" id="q_empCode" placeholder="E-XXXX" required></div>
+
+        <div class="section-title">Owner &amp; Location</div>
+        <div class="form-group"><label>Owner Name <span>*</span></label><input type="text" id="q_ownerName" required></div>
+        <div class="form-group"><label>Owner Number <span>*</span></label><input type="tel" id="q_ownerNumber" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" placeholder="10-digit mobile" required></div>
+        <div class="form-group"><label>Location (GPS address) <span>*</span></label>
+            <textarea id="q_location" rows="2" placeholder="Capturing location…" readonly required style="background:#f1f3f4;resize:none;"></textarea>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                <button type="button" onclick="captureLocation(false,'q_location','qLocStatus').catch(function(){})" style="padding:7px 12px;border:1px solid #1a73e8;background:#fff;color:#1a73e8;border-radius:6px;font-size:13px;cursor:pointer;">📍 Recapture</button>
+                <span id="qLocStatus" style="font-size:12px;color:#5f6368;"></span>
+            </div>
+        </div>
+        <div class="form-group"><label>Photo (optional)</label>
+            <input type="file" id="q_photo" accept="image/*" capture="environment" onchange="qPhotoPicked(this)">
+            <img id="q_preview" alt="" style="display:none;max-width:100%;max-height:200px;margin-top:8px;border-radius:6px;border:1px solid #dadce0;">
+            <div id="q_photoSt" class="field-hint"></div>
+        </div>
+        <button type="submit" class="submit-btn" id="q_submitBtn">Save Quick Capture</button>
+    </form>
+    <div id="q_ok" class="successMsg">✅ Saved. Complete the rest of the details at the branch using the owner number.</div>
+    <div id="q_err" class="errorMsg"></div>
 </div>
 </div>
 
@@ -502,7 +543,7 @@ function switchTab(t) {
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('tab-'+t).classList.add('active');
-    var idx = {leads:0,commitment:1,admin:2,sbl:3}[t];
+    var idx = {leads:0,quick:1,commitment:2,admin:3,sbl:4}[t];
     document.querySelectorAll('.tab-btn')[idx].classList.add('active');
 }
 function switchSubTab(s) {
@@ -582,8 +623,8 @@ function reverseGeocode(la,lo){
         });
     });
 }
-function captureLocation(silent){
-    var f=document.getElementById('f_marketLocation'),st=document.getElementById('locStatus');
+function captureLocation(silent,fid,sid){
+    var f=document.getElementById(fid||'f_marketLocation'),st=document.getElementById(sid||'locStatus');
     return new Promise(function(res,rej){
         if(!navigator.geolocation){st.textContent='❌ GPS not supported on this device/browser.';st.style.color='#d93025';return rej(new Error('GPS not supported'));}
         st.textContent='⏳ Getting location…';st.style.color='#5f6368';
@@ -612,6 +653,112 @@ function captureLocation(silent){
     });
 }
 captureLocation(true).catch(function(){});
+/* ═══ QUICK CAPTURE (field) + FETCH AT BRANCH ═══ */
+function _h(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _todayIso(){return new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);}
+document.getElementById('q_branch').innerHTML=document.getElementById('f_branch').innerHTML;
+try{var _id=JSON.parse(localStorage.getItem('tl_ident')||'null');
+    if(_id){document.getElementById('q_branch').value=_id.b||'';document.getElementById('q_execName').value=_id.n||'';document.getElementById('q_empCode').value=_id.c||'';}}catch(e){}
+document.getElementById('q_ownerNumber').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,10);});
+captureLocation(true,'q_location','qLocStatus').catch(function(){});
+
+var _qPhoto=null;
+function compressImage(file){
+    return new Promise(function(res,rej){
+        var fr=new FileReader();
+        fr.onerror=function(){rej(new Error('Could not read photo'));};
+        fr.onload=function(){
+            var img=new Image();
+            img.onerror=function(){rej(new Error('Not a valid image'));};
+            img.onload=function(){
+                var s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');
+                c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+                c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+                res(c.toDataURL('image/jpeg',0.7));
+            };
+            img.src=fr.result;
+        };
+        fr.readAsDataURL(file);
+    });
+}
+function qPhotoPicked(inp){
+    var st=document.getElementById('q_photoSt'),pv=document.getElementById('q_preview');
+    _qPhoto=null;pv.style.display='none';st.textContent='';
+    if(!inp.files||!inp.files[0])return;
+    st.textContent='⏳ Preparing photo…';
+    compressImage(inp.files[0]).then(function(d){
+        _qPhoto={data:d.split(',')[1],type:'image/jpeg'};
+        pv.src=d;pv.style.display='block';
+        st.textContent='✅ Photo ready ('+Math.round(_qPhoto.data.length*0.75/1024)+' KB)';
+    }).catch(function(e){st.textContent='❌ '+e.message;inp.value='';});
+}
+document.getElementById('quickForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var ok=document.getElementById('q_ok'),er=document.getElementById('q_err'),btn=document.getElementById('q_submitBtn');
+    ok.style.display='none';er.style.display='none';
+    btn.textContent='⏳ Saving…';btn.disabled=true;
+    function fail(m){er.textContent='❌ '+m;er.style.display='block';btn.textContent='Save Quick Capture';btn.disabled=false;}
+    captureLocation(true,'q_location','qLocStatus').then(function(loc){
+        var g=function(i){return document.getElementById(i).value.trim();};
+        var pl={action:'quickSubmit',date:_todayIso(),branch:g('q_branch'),execName:g('q_execName'),empCode:g('q_empCode'),
+                ownerName:g('q_ownerName'),ownerNumber:g('q_ownerNumber'),location:loc.addr};
+        if(_qPhoto){pl.photoData=_qPhoto.data;pl.photoType=_qPhoto.type;pl.photoName='quick_'+pl.ownerNumber+'.jpg';}
+        try{localStorage.setItem('tl_ident',JSON.stringify({b:pl.branch,n:pl.execName,c:pl.empCode}));}catch(x){}
+        return fetch(GAS_URL,{method:'POST',body:JSON.stringify(pl)}).then(function(r){return r.json();});
+    }).then(function(d){
+        if(d.result!=='success')return fail(d.error||'Server rejected the entry.');
+        var msg='✅ Saved. Complete the rest of the details at the branch using the owner number.';
+        if(d.duplicate)msg+=' ⚠ This number already exists in records.';
+        if(d.photoError)msg+=' ⚠ Photo not saved: '+d.photoError;
+        ok.textContent=msg;ok.style.display='block';
+        document.getElementById('q_ownerName').value='';document.getElementById('q_ownerNumber').value='';
+        document.getElementById('q_photo').value='';_qPhoto=null;
+        document.getElementById('q_preview').style.display='none';document.getElementById('q_photoSt').textContent='';
+        btn.textContent='Save Quick Capture';btn.disabled=false;window.scrollTo(0,0);
+        captureLocation(true,'q_location','qLocStatus').catch(function(){});
+    }).catch(function(err){fail(err.message&&err.message!=='Failed to fetch'?err.message:'Upload failed. Check your connection and try again.');});
+});
+
+/* ═══ EMPLOYEE CODE → BRANCH + EXECUTIVE NAME ═══ */
+var _empTimer=null;
+function lockIdent(lock){
+    var b=document.getElementById('f_branch'),n=document.getElementById('f_execName');
+    n.readOnly=lock;b.style.pointerEvents=lock?'none':'';b.tabIndex=lock?-1:0;
+    n.style.background=b.style.background=lock?'#f1f3f4':'';
+}
+function lookupEmp(){
+    var code=document.getElementById('f_empCode').value.trim(),st=document.getElementById('empStatus');
+    var b=document.getElementById('f_branch'),n=document.getElementById('f_execName');
+    if(!code){lockIdent(false);st.textContent='';return;}
+    st.style.color='#5f6368';st.textContent='⏳ Fetching details…';
+    fetch(GAS_URL+'?'+new URLSearchParams({action:'getStaff',code:code}),{method:'GET',mode:'cors'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(document.getElementById('f_empCode').value.trim()!==code)return;   // code changed meanwhile
+        if(!d.found){lockIdent(false);b.value='';n.value='';st.style.color='#d93025';st.textContent='⚠ Code not found. Enter Branch and Executive Name manually.';return;}
+        var opt=Array.prototype.filter.call(b.options,function(o){return o.value.toUpperCase()===String(d.branch||'').trim().toUpperCase();})[0];
+        n.value=d.name||'';
+        if(opt){b.value=opt.value;lockIdent(true);st.style.color='#188038';st.textContent='✅ '+(d.name||'')+' · '+opt.value;}
+        else{b.value='';lockIdent(false);n.readOnly=!!d.name;st.style.color='#d93025';st.textContent='⚠ Branch "'+(d.branch||'')+'" not in list. Select the branch manually.';}
+    })
+    .catch(function(){lockIdent(false);st.style.color='#d93025';st.textContent='❌ Could not fetch. Enter Branch and Executive Name manually.';});
+}
+document.getElementById('f_empCode').addEventListener('input',function(){clearTimeout(_empTimer);_empTimer=setTimeout(lookupEmp,600);});
+document.getElementById('f_empCode').addEventListener('change',function(){clearTimeout(_empTimer);lookupEmp();});
+
+/* ═══ LEAD PHOTO ═══ */
+var _leadPhoto=null;
+function leadPhotoPicked(inp){
+    var st=document.getElementById('f_photoSt'),pv=document.getElementById('f_preview');
+    _leadPhoto=null;pv.style.display='none';st.textContent='';
+    if(!inp.files||!inp.files[0])return;
+    st.textContent='⏳ Preparing photo…';
+    compressImage(inp.files[0]).then(function(d){
+        _leadPhoto={data:d.split(',')[1],type:'image/jpeg'};
+        pv.src=d;pv.style.display='block';
+        st.textContent='✅ Photo ready ('+Math.round(_leadPhoto.data.length*0.75/1024)+' KB)';
+    }).catch(function(e){st.textContent='❌ '+e.message;inp.value='';});
+}
 document.getElementById('leadForm').addEventListener('submit',function(e){
     e.preventDefault();
     document.getElementById('successMsg').style.display='none';document.getElementById('errorMsg').style.display='none';
@@ -619,7 +766,13 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
     if(!confirm('Submit this lead?'))return;
     var btn=document.getElementById('submitBtn');btn.textContent='⏳ Submitting…';btn.disabled=true;
     captureLocation(true).then(function(loc){
-    var p=new URLSearchParams({action:'submit',date:document.getElementById('f_date').value,
+    var upload=_leadPhoto?fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'uploadPhoto',branch:document.getElementById('f_branch').value,
+            ownerNumber:document.getElementById('f_ownerNumber').value,photoData:_leadPhoto.data,photoType:_leadPhoto.type})})
+        .then(function(r){return r.json();})
+        .then(function(d){if(d.result!=='success')throw new Error('Photo upload failed: '+(d.error||'try again'));return d.link;})
+        :Promise.resolve('');
+    upload.then(function(photoLink){
+    var p=new URLSearchParams({action:'submit',photoLink:photoLink,date:document.getElementById('f_date').value,
         branch:document.getElementById('f_branch').value,execName:document.getElementById('f_execName').value,
         empCode:document.getElementById('f_empCode').value,
         activity:document.getElementById('f_activity').value,
@@ -633,12 +786,14 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
         otherProduct:otherProdSel.value,notIntReason:notIntSel.value,exLoan:exLoanSel.value,exLoanType:exLoanType.value,
         exLoanWhere:exLoanWhere.value.trim(),exLoanAmount:exLoanAmt.value});
     fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
-    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();_loc=null;captureLocation(true).catch(function(){});
+    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();_loc=null;_leadPhoto=null;document.getElementById('f_preview').style.display='none';document.getElementById('f_photoSt').textContent='';lockIdent(false);document.getElementById('empStatus').textContent='';captureLocation(true).catch(function(){});
         document.getElementById('f_date').valueAsDate=new Date();updateLoanUI();bizSel.innerHTML='<option value="">-- Select Sector First --</option>';
         bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
         btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);})
     .catch(function(err){document.getElementById('errorMsg').textContent='❌ '+err.message;document.getElementById('errorMsg').style.display='block';
         btn.textContent='Submit Lead';btn.disabled=false;});
+    }).catch(function(err){document.getElementById('errorMsg').textContent='❌ Lead not submitted. '+(err.message==='Failed to fetch'?'Photo upload failed. Check connection.':err.message);document.getElementById('errorMsg').style.display='block';
+        btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);});
     },function(err){document.getElementById('errorMsg').textContent='❌ Lead not submitted. '+err.message;document.getElementById('errorMsg').style.display='block';
         btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);});
 });
