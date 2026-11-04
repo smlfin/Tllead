@@ -224,7 +224,13 @@
         <div class="form-group"><label>Shop Name <span>*</span></label><input type="text" id="f_shopName" placeholder="e.g. Royal Traders" required></div>
 
         <div class="section-title">Marketing &amp; Other Product Interest</div>
-        <div class="form-group"><label>Location of Marketing <span>*</span></label><input type="text" id="f_marketLocation" placeholder="Area / town / road where marketed" required></div>
+        <div class="form-group"><label>Location of Marketing (GPS) <span>*</span></label>
+            <textarea id="f_marketLocation" rows="2" placeholder="Capturing location…" readonly required style="background:#f1f3f4;resize:none;"></textarea>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                <button type="button" id="locBtn" onclick="captureLocation(false).catch(function(){})" style="padding:7px 12px;border:1px solid #1a73e8;background:#fff;color:#1a73e8;border-radius:6px;font-size:13px;cursor:pointer;">📍 Recapture</button>
+                <span id="locStatus" style="font-size:12px;color:#5f6368;"></span>
+            </div>
+        </div>
         <div class="form-group">
             <label>Interested in Other Products <span>*</span></label>
             <select id="f_otherProduct" required>
@@ -554,12 +560,65 @@ function updateLoanUI(){
 }
 otherProdSel.addEventListener('change',updateLoanUI);
 exLoanSel.addEventListener('change',updateLoanUI);
+/* ═══ MANDATORY GPS CAPTURE (Location of Marketing) ═══ */
+var _loc=null;
+function _fetchJson(url){
+    var c=new AbortController(),t=setTimeout(function(){c.abort();},8000);
+    return fetch(url,{signal:c.signal}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+}
+function reverseGeocode(la,lo){
+    return _fetchJson('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=en&lat='+la+'&lon='+lo)
+    .then(function(d){
+        var a=(d&&d.display_name||'').replace(/,\s*India\s*$/i,'').trim();
+        if(!a)throw new Error('empty');
+        return a;
+    })
+    .catch(function(){
+        return _fetchJson('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en&latitude='+la+'&longitude='+lo)
+        .then(function(d){
+            var a=[d.locality,d.city,d.principalSubdivision,d.postcode].filter(function(x,i,arr){return x&&arr.indexOf(x)===i;}).join(', ');
+            if(!a)throw new Error('empty');
+            return a;
+        });
+    });
+}
+function captureLocation(silent){
+    var f=document.getElementById('f_marketLocation'),st=document.getElementById('locStatus');
+    return new Promise(function(res,rej){
+        if(!navigator.geolocation){st.textContent='❌ GPS not supported on this device/browser.';st.style.color='#d93025';return rej(new Error('GPS not supported'));}
+        st.textContent='⏳ Getting location…';st.style.color='#5f6368';
+        navigator.geolocation.getCurrentPosition(function(pos){
+            var la=pos.coords.latitude.toFixed(6),lo=pos.coords.longitude.toFixed(6),ac=Math.round(pos.coords.accuracy);
+            st.textContent='⏳ Getting address…';
+            reverseGeocode(la,lo).then(function(addr){
+                _loc={lat:la,lng:lo,acc:ac,addr:addr};
+                f.value=addr;
+                st.textContent='✅ Location captured (GPS accuracy ±'+ac+' m)';st.style.color='#188038';
+                res(_loc);
+            },function(){
+                _loc=null;f.value='';
+                var m='Could not get the address. Check internet and tap Recapture.';
+                st.textContent='❌ '+m;st.style.color='#d93025';
+                rej(new Error(m));
+            });
+        },function(err){
+            _loc=null;f.value='';
+            var m=err.code===1?'Location permission denied. Allow location for this site in browser settings and tap Recapture.'
+                 :err.code===2?'Location unavailable. Turn on GPS and tap Recapture.'
+                 :'Location timed out. Tap Recapture.';
+            st.textContent='❌ '+m;st.style.color='#d93025';
+            rej(new Error(m));
+        },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+    });
+}
+captureLocation(true).catch(function(){});
 document.getElementById('leadForm').addEventListener('submit',function(e){
     e.preventDefault();
     document.getElementById('successMsg').style.display='none';document.getElementById('errorMsg').style.display='none';
     if(sectorSel.value==='Others'&&!otherInput.value.trim()){alert('Please specify Business Type.');otherInput.focus();return;}
     if(!confirm('Submit this lead?'))return;
     var btn=document.getElementById('submitBtn');btn.textContent='⏳ Submitting…';btn.disabled=true;
+    captureLocation(true).then(function(loc){
     var p=new URLSearchParams({action:'submit',date:document.getElementById('f_date').value,
         branch:document.getElementById('f_branch').value,execName:document.getElementById('f_execName').value,
         empCode:document.getElementById('f_empCode').value,
@@ -570,16 +629,18 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
         shopName:document.getElementById('f_shopName').value,ownerName:document.getElementById('f_ownerName').value,
         ownerNumber:document.getElementById('f_ownerNumber').value,status:document.getElementById('f_status').value,
         feedback:document.getElementById('f_feedback').value,followUp:document.getElementById('f_followUp').value,
-        marketLocation:document.getElementById('f_marketLocation').value.trim(),
+        marketLocation:loc.addr,
         otherProduct:otherProdSel.value,notIntReason:notIntSel.value,exLoan:exLoanSel.value,exLoanType:exLoanType.value,
         exLoanWhere:exLoanWhere.value.trim(),exLoanAmount:exLoanAmt.value});
     fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
-    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();
+    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();_loc=null;captureLocation(true).catch(function(){});
         document.getElementById('f_date').valueAsDate=new Date();updateLoanUI();bizSel.innerHTML='<option value="">-- Select Sector First --</option>';
         bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
         btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);})
     .catch(function(err){document.getElementById('errorMsg').textContent='❌ '+err.message;document.getElementById('errorMsg').style.display='block';
         btn.textContent='Submit Lead';btn.disabled=false;});
+    },function(err){document.getElementById('errorMsg').textContent='❌ Lead not submitted. '+err.message;document.getElementById('errorMsg').style.display='block';
+        btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);});
 });
 
 /* ═══════════════════════════════════
