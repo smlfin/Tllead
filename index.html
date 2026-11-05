@@ -7,11 +7,52 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; }
 
-        /* ── TAB BAR ── */
-        .tab-bar { display:flex; background:#1a73e8; box-shadow:0 2px 8px rgba(0,0,0,0.18); position:sticky; top:0; z-index:100; overflow-x:auto; }
-        .tab-btn { flex:1; min-width:110px; padding:14px 8px; border:none; background:transparent; color:rgba(255,255,255,0.7); font-size:13px; font-weight:600; cursor:pointer; border-bottom:3px solid transparent; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
-        .tab-btn.active { color:#fff; border-bottom:3px solid #fff; background:rgba(255,255,255,0.1); }
-        .tab-btn:hover:not(.active) { background:rgba(255,255,255,0.08); color:#fff; }
+        /* ── VERTICAL MENU ── */
+        .app-topbar { display:flex; align-items:center; gap:12px; background:#1a73e8; color:#fff; padding:10px 14px; position:sticky; top:0; z-index:200; box-shadow:0 2px 8px rgba(0,0,0,0.18); }
+        .app-topbar button { background:none; border:none; color:#fff; font-size:26px; line-height:1; cursor:pointer; padding:2px 6px; }
+        .app-topbar span { font-size:16px; font-weight:600; }
+        .side-menu { position:fixed; top:0; left:0; bottom:0; width:250px; background:#fff; box-shadow:2px 0 14px rgba(0,0,0,0.2); transform:translateX(-100%); transition:transform .25s; z-index:300; overflow-y:auto; display:flex; flex-direction:column; }
+        .side-menu.open { transform:none; }
+        .menu-brand { background:#1a73e8; color:#fff; padding:18px 18px 16px; }
+        .menu-brand b { display:block; font-size:17px; }
+        .menu-brand small { opacity:.8; font-size:12px; }
+        .menu-item { display:flex; align-items:center; gap:10px; width:100%; padding:13px 18px; border:none; border-left:4px solid transparent; background:none; text-align:left; font-size:14px; font-weight:600; color:#3c4043; cursor:pointer; font-family:inherit; }
+        .menu-item:hover { background:#f0f2f5; }
+        .menu-item.active { background:#e8f0fe; color:#1a73e8; border-left-color:#1a73e8; }
+        .menu-sep { height:1px; background:#e8eaed; margin:6px 0; }
+        .menu-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:250; }
+        .menu-overlay.show { display:block; }
+        @media (min-width:900px) {
+            .side-menu { transform:none; }
+            .app-topbar { display:none; }
+            .menu-overlay, .menu-overlay.show { display:none; }
+            .main-wrap { margin-left:250px; }
+        }
+
+        /* ── AUDIT / PASSBOOK ── */
+        .flt { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+        .flt .full { grid-column:1/-1; }
+        .flt-actions { display:flex; gap:8px; }
+        .flt-actions button { padding:11px 16px; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
+        .btn-primary { background:#1a73e8; color:#fff; border:none; flex:1; }
+        .btn-primary:disabled { background:#9aa0a6; }
+        .btn-ghost { background:#fff; color:#5f6368; border:1px solid #dadce0; }
+        .au-sum { background:#e8f0fe; color:#174ea6; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; margin:12px 0; }
+        .au-card { display:flex; gap:12px; border:1px solid #e8eaed; border-radius:10px; padding:10px; margin-bottom:10px; background:#fff; }
+        .au-ph { width:96px; height:96px; flex:none; border-radius:8px; background:#f1f3f4; display:flex; align-items:center; justify-content:center; font-size:11px; color:#9aa0a6; text-align:center; overflow:hidden; text-decoration:none; }
+        .au-info { font-size:13px; color:#3c4043; line-height:1.5; min-width:0; word-break:break-word; }
+        .au-info b { color:#202124; font-size:14px; }
+        .au-meta { color:#70757a; font-size:12px; }
+        .stat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0; }
+        .stat { background:#f8f9fa; border:1px solid #e8eaed; border-radius:8px; padding:10px; text-align:center; }
+        .stat b { display:block; font-size:22px; color:#1a73e8; }
+        .stat small { color:#70757a; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+        .pb-tabs { display:flex; margin-bottom:18px; border-bottom:2px solid #e8eaed; }
+        .pb-tab { flex:1; padding:11px; border:none; background:transparent; color:#70757a; font-size:14px; font-weight:600; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:inherit; }
+        .pb-tab.active { color:#1a73e8; border-bottom-color:#1a73e8; }
+        table.pb-t { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:12px; }
+        table.pb-t th { text-align:left; background:#f1f3f4; padding:8px; color:#5f6368; font-size:12px; }
+        table.pb-t td { padding:8px; border-bottom:1px solid #e8eaed; }
 
         /* ── PANELS ── */
         .tab-panel { display:none; padding:16px; }
@@ -153,15 +194,23 @@
 </head>
 <body>
 
-<!-- ═══════════ MAIN TAB BAR ═══════════ -->
-<div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('leads')">📋 Lead Entry</button>
-    <button class="tab-btn" onclick="switchTab('quick')">⚡ Quick Capture</button>
-    <button class="tab-btn" onclick="switchTab('commitment')">🎯 Commitment</button>
-    <button class="tab-btn" onclick="switchTab('admin')">🛡️ Admin MIS</button>
-    <button class="tab-btn" onclick="switchTab('sbl')">🏪 SBL</button>
-    <button class="tab-btn" onclick="window.location.href='bm-login.html'">👤 BM Login</button>
-</div>
+<!-- ═══════════ VERTICAL MENU ═══════════ -->
+<div class="app-topbar"><button type="button" onclick="toggleMenu()" aria-label="Menu">☰</button><span id="topTitle">Lead Entry</span></div>
+<div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+<nav class="side-menu" id="sideMenu">
+    <div class="menu-brand"><b>SML Group</b><small>Field Operations</small></div>
+    <button class="menu-item active" data-tab="leads" onclick="switchTab('leads')">📋 Lead Entry</button>
+    <button class="menu-item" data-tab="quick" onclick="switchTab('quick')">⚡ Quick Capture</button>
+    <button class="menu-item" data-tab="passbook" onclick="switchTab('passbook')">📒 Passbook</button>
+    <button class="menu-item" data-tab="commitment" onclick="switchTab('commitment')">🎯 Commitment</button>
+    <div class="menu-sep"></div>
+    <button class="menu-item" data-tab="admin" onclick="switchTab('admin')">🛡️ Admin MIS</button>
+    <button class="menu-item" data-tab="sbl" onclick="switchTab('sbl')">🏪 SBL</button>
+    <button class="menu-item" data-tab="audit" onclick="switchTab('audit')">🔍 Audit 🔒</button>
+    <div class="menu-sep"></div>
+    <button class="menu-item" onclick="window.location.href='bm-login.html'">👤 BM Login</button>
+</nav>
+<div class="main-wrap">
 
 <!-- ═══════════════════════════════════════
      TAB 1 — TRADERS LOAN LEAD ENTRY
@@ -528,6 +577,94 @@
 </div>
 </div>
 
+<!-- ═══════════════════════════════════════
+     PASSBOOK (weekly customer visit proof)
+═══════════════════════════════════════ -->
+<div id="tab-passbook" class="tab-panel">
+<div class="container-wide">
+    <h2>📒 Passbook Visit</h2>
+    <div class="pb-tabs">
+        <button type="button" class="pb-tab active" id="pbt-exec" onclick="pbSwitch('exec')">👤 Executive</button>
+        <button type="button" class="pb-tab" id="pbt-admin" onclick="pbSwitch('admin')">🛡️ Admin 🔒</button>
+    </div>
+
+    <!-- Executive -->
+    <div id="pb-exec" style="max-width:600px;margin:0 auto;">
+        <div class="field-hint" style="font-size:12px;margin-bottom:12px;">Visit each customer once a week, update the passbook up to date, and upload the passbook photo here.</div>
+        <form id="pbForm" autocomplete="off">
+            <div class="form-group"><label>Date</label><input type="date" id="pb_date" readonly style="background:#f1f3f4;"></div>
+            <div class="form-group"><label>Employee Code <span>*</span></label><input type="text" id="pb_empCode" placeholder="Enter employee code" required>
+                <div id="pbEmpStatus" class="field-hint" style="font-size:12px;"></div></div>
+            <div class="form-group"><label>Branch <span>*</span></label><select id="pb_branch" required></select></div>
+            <div class="form-group"><label>Executive Name <span>*</span></label><input type="text" id="pb_execName" placeholder="Full Name" required></div>
+            <div class="form-group"><label>Loan Number <span>*</span></label><input type="text" id="pb_loan" required></div>
+            <div class="form-group"><label>Customer Name <span>*</span></label><input type="text" id="pb_customer" required></div>
+            <div class="form-group"><label>Passbook Photo <span>*</span></label>
+                <input type="file" id="pb_photo" accept="image/*" onchange="pbPhotoPicked(this)">
+                <img id="pb_preview" alt="" style="display:none;max-width:100%;max-height:220px;margin-top:8px;border-radius:6px;border:1px solid #dadce0;">
+                <div id="pb_photoSt" class="field-hint"></div>
+            </div>
+            <button type="submit" class="submit-btn" id="pb_submitBtn">Submit Passbook Visit</button>
+        </form>
+        <div id="pb_ok" class="successMsg">✅ Passbook visit saved.</div>
+        <div id="pb_err" class="errorMsg"></div>
+    </div>
+
+    <!-- Admin -->
+    <div id="pb-admin" class="hidden">
+        <div class="admin-lock login-box">
+            <div class="section-title">Admin Password</div>
+            <div class="form-group"><input type="password" class="admin-pwd" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')adminUnlock(this)"></div>
+            <button type="button" class="submit-btn" onclick="adminUnlock(this)">🔓 Unlock</button>
+            <div class="errorMsg admin-err"></div>
+        </div>
+        <div class="admin-body hidden">
+            <div class="flt">
+                <div class="full"><label>Branch</label><select id="pa_branch"></select></div>
+                <div><label>From</label><input type="date" id="pa_from"></div>
+                <div><label>To</label><input type="date" id="pa_to"></div>
+            </div>
+            <div class="flt-actions">
+                <button type="button" class="btn-primary" id="pa_btn" onclick="paLoad()">Show Passbook Visits</button>
+                <button type="button" class="btn-ghost" onclick="adminLock()">🔒 Lock</button>
+            </div>
+            <div id="pa_err" class="errorMsg"></div>
+            <div id="pa_results"></div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     AUDIT (location + photo check)
+═══════════════════════════════════════ -->
+<div id="tab-audit" class="tab-panel">
+<div class="container-wide">
+    <h2>🔍 Audit — Location &amp; Photo</h2>
+    <div class="admin-lock login-box">
+        <div class="section-title">Admin Password</div>
+        <div class="form-group"><input type="password" class="admin-pwd" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')adminUnlock(this)"></div>
+        <button type="button" class="submit-btn" onclick="adminUnlock(this)">🔓 Unlock</button>
+        <div class="errorMsg admin-err"></div>
+    </div>
+    <div class="admin-body hidden">
+        <div class="flt">
+            <div class="full"><label>Branch</label><select id="au_branch"></select></div>
+            <div><label>From</label><input type="date" id="au_from"></div>
+            <div><label>To</label><input type="date" id="au_to"></div>
+        </div>
+        <div class="flt-actions">
+            <button type="button" class="btn-primary" id="au_btn" onclick="auLoad()">Show Entries</button>
+            <button type="button" class="btn-ghost" onclick="adminLock()">🔒 Lock</button>
+        </div>
+        <div id="au_err" class="errorMsg"></div>
+        <div id="au_results"></div>
+    </div>
+</div>
+</div>
+
+</div><!-- /main-wrap -->
+
 <script>
 /* ═══════════════════════════════════
    CONFIG — update GAS URL if redeployed
@@ -539,12 +676,18 @@ const SBL_PASS   = 'SBL123'; // ← password for the SBL report tab
 /* ═══════════════════════════════════
    TAB SWITCHING
 ═══════════════════════════════════ */
+function toggleMenu(){document.getElementById('sideMenu').classList.toggle('open');document.getElementById('menuOverlay').classList.toggle('show');}
+function closeMenu(){document.getElementById('sideMenu').classList.remove('open');document.getElementById('menuOverlay').classList.remove('show');}
 function switchTab(t) {
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    var label='';
+    document.querySelectorAll('.menu-item[data-tab]').forEach(function(b){
+        var on=b.dataset.tab===t;b.classList.toggle('active',on);if(on)label=b.textContent.replace('🔒','').trim();
+    });
     document.getElementById('tab-'+t).classList.add('active');
-    var idx = {leads:0,quick:1,commitment:2,admin:3,sbl:4}[t];
-    document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+    document.getElementById('topTitle').textContent=label;
+    if(t==='passbook')document.getElementById('pb_date').value=_todayIso();
+    closeMenu();window.scrollTo(0,0);
 }
 function switchSubTab(s) {
     document.querySelectorAll('.sub-panel').forEach(p=>p.classList.remove('active'));
@@ -663,7 +806,7 @@ document.getElementById('q_ownerNumber').addEventListener('input',function(){thi
 captureLocation(true,'q_location','qLocStatus').catch(function(){});
 
 var _qPhoto=null;
-function compressImage(file){
+function compressImage(file,max,q){
     return new Promise(function(res,rej){
         var fr=new FileReader();
         fr.onerror=function(){rej(new Error('Could not read photo'));};
@@ -671,10 +814,10 @@ function compressImage(file){
             var img=new Image();
             img.onerror=function(){rej(new Error('Not a valid image'));};
             img.onload=function(){
-                var s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');
+                var s=Math.min(1,(max||1280)/Math.max(img.width,img.height)),c=document.createElement('canvas');
                 c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
                 c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-                res(c.toDataURL('image/jpeg',0.7));
+                res(c.toDataURL('image/jpeg',q||0.7));
             };
             img.src=fr.result;
         };
@@ -719,32 +862,162 @@ document.getElementById('quickForm').addEventListener('submit',function(e){
     }).catch(function(err){fail(err.message&&err.message!=='Failed to fetch'?err.message:'Upload failed. Check your connection and try again.');});
 });
 
-/* ═══ EMPLOYEE CODE → BRANCH + EXECUTIVE NAME ═══ */
-var _empTimer=null;
-function lockIdent(lock){
-    var b=document.getElementById('f_branch'),n=document.getElementById('f_execName');
-    n.readOnly=lock;b.style.pointerEvents=lock?'none':'';b.tabIndex=lock?-1:0;
-    n.style.background=b.style.background=lock?'#f1f3f4':'';
+/* ═══ EMPLOYEE CODE → BRANCH + EXECUTIVE NAME (shared) ═══ */
+function bindEmpLookup(codeId,nameId,branchId,statusId){
+    var code=document.getElementById(codeId),nm=document.getElementById(nameId),br=document.getElementById(branchId),st=document.getElementById(statusId),timer=null;
+    function lock(on){nm.readOnly=on;br.style.pointerEvents=on?'none':'';br.tabIndex=on?-1:0;nm.style.background=br.style.background=on?'#f1f3f4':'';}
+    function look(){
+        var c=code.value.trim();
+        if(!c){lock(false);st.textContent='';return;}
+        st.style.color='#5f6368';st.textContent='⏳ Fetching details…';
+        fetch(GAS_URL+'?'+new URLSearchParams({action:'getStaff',code:c}),{method:'GET',mode:'cors'})
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(code.value.trim()!==c)return;   // code changed meanwhile
+            if(!d.found){lock(false);br.value='';nm.value='';st.style.color='#d93025';st.textContent='⚠ Code not found. Enter Branch and Executive Name manually.';return;}
+            var opt=Array.prototype.filter.call(br.options,function(o){return o.value.toUpperCase()===String(d.branch||'').trim().toUpperCase();})[0];
+            nm.value=d.name||'';
+            if(opt){br.value=opt.value;lock(true);st.style.color='#188038';st.textContent='✅ '+(d.name||'')+' · '+opt.value;}
+            else{br.value='';lock(false);nm.readOnly=!!d.name;st.style.color='#d93025';st.textContent='⚠ Branch "'+(d.branch||'')+'" not in list. Select the branch manually.';}
+        })
+        .catch(function(){lock(false);st.style.color='#d93025';st.textContent='❌ Could not fetch. Enter Branch and Executive Name manually.';});
+    }
+    code.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(look,600);});
+    code.addEventListener('change',function(){clearTimeout(timer);look();});
+    return {reset:function(){lock(false);st.textContent='';}};
 }
-function lookupEmp(){
-    var code=document.getElementById('f_empCode').value.trim(),st=document.getElementById('empStatus');
-    var b=document.getElementById('f_branch'),n=document.getElementById('f_execName');
-    if(!code){lockIdent(false);st.textContent='';return;}
-    st.style.color='#5f6368';st.textContent='⏳ Fetching details…';
-    fetch(GAS_URL+'?'+new URLSearchParams({action:'getStaff',code:code}),{method:'GET',mode:'cors'})
+var leadEmp=bindEmpLookup('f_empCode','f_execName','f_branch','empStatus');
+var pbEmp=bindEmpLookup('pb_empCode','pb_execName','pb_branch','pbEmpStatus');
+['pb_branch'].forEach(function(id){document.getElementById(id).innerHTML=document.getElementById('f_branch').innerHTML;});
+['au_branch','pa_branch'].forEach(function(id){
+    document.getElementById(id).innerHTML='<option value="ALL">All Branches</option>'+
+        Array.prototype.filter.call(document.getElementById('f_branch').options,function(o){return o.value;}).map(function(o){return '<option value="'+_h(o.value)+'">'+_h(o.text)+'</option>';}).join('');
+});
+(function(){var t=_todayIso(),w=new Date(Date.now()-6*864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    ['au','pa'].forEach(function(p){document.getElementById(p+'_from').value=w;document.getElementById(p+'_to').value=t;});})();
+
+/* ═══ ADMIN GATE (Audit + Passbook admin) — password verified by the server ═══ */
+var _adminPwd=null;
+function applyAdminState(){
+    var on=!!_adminPwd;
+    document.querySelectorAll('.admin-lock').forEach(function(e){e.classList.toggle('hidden',on);});
+    document.querySelectorAll('.admin-body').forEach(function(e){e.classList.toggle('hidden',!on);});
+}
+function adminLock(){_adminPwd=null;applyAdminState();document.getElementById('au_results').innerHTML='';document.getElementById('pa_results').innerHTML='';}
+function adminUnlock(el){
+    var box=el.closest('.admin-lock'),inp=box.querySelector('.admin-pwd'),err=box.querySelector('.admin-err'),btn=box.querySelector('button'),pwd=inp.value;
+    err.style.display='none';
+    if(!pwd){err.textContent='❌ Enter the password.';err.style.display='block';return;}
+    btn.disabled=true;
+    fetch(GAS_URL+'?'+new URLSearchParams({action:'checkAdmin',pwd:pwd}),{mode:'cors'})
     .then(function(r){return r.json();})
     .then(function(d){
-        if(document.getElementById('f_empCode').value.trim()!==code)return;   // code changed meanwhile
-        if(!d.found){lockIdent(false);b.value='';n.value='';st.style.color='#d93025';st.textContent='⚠ Code not found. Enter Branch and Executive Name manually.';return;}
-        var opt=Array.prototype.filter.call(b.options,function(o){return o.value.toUpperCase()===String(d.branch||'').trim().toUpperCase();})[0];
-        n.value=d.name||'';
-        if(opt){b.value=opt.value;lockIdent(true);st.style.color='#188038';st.textContent='✅ '+(d.name||'')+' · '+opt.value;}
-        else{b.value='';lockIdent(false);n.readOnly=!!d.name;st.style.color='#d93025';st.textContent='⚠ Branch "'+(d.branch||'')+'" not in list. Select the branch manually.';}
+        btn.disabled=false;
+        if(d.ok){_adminPwd=pwd;document.querySelectorAll('.admin-pwd').forEach(function(i){i.value='';});applyAdminState();}
+        else{err.textContent='❌ Incorrect password.';err.style.display='block';}
     })
-    .catch(function(){lockIdent(false);st.style.color='#d93025';st.textContent='❌ Could not fetch. Enter Branch and Executive Name manually.';});
+    .catch(function(){btn.disabled=false;err.textContent='❌ Connection error. Try again.';err.style.display='block';});
 }
-document.getElementById('f_empCode').addEventListener('input',function(){clearTimeout(_empTimer);_empTimer=setTimeout(lookupEmp,600);});
-document.getElementById('f_empCode').addEventListener('change',function(){clearTimeout(_empTimer);lookupEmp();});
+function adminFetch(params,errId,btnId,done){
+    var err=document.getElementById(errId),btn=document.getElementById(btnId),label=btn.textContent;
+    err.style.display='none';btn.disabled=true;btn.textContent='⏳ Loading…';
+    params.pwd=_adminPwd;
+    fetch(GAS_URL+'?'+new URLSearchParams(params),{mode:'cors'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        btn.disabled=false;btn.textContent=label;
+        if(d.result==='error'){
+            if(/password/i.test(d.error||'')){adminLock();}
+            err.textContent='❌ '+(d.error||'Failed');err.style.display='block';return;
+        }
+        done(d);
+    })
+    .catch(function(){btn.disabled=false;btn.textContent=label;err.textContent='❌ Connection error. Try again.';err.style.display='block';});
+}
+function driveId(u){var m=String(u).match(/\/d\/([\w-]+)/)||String(u).match(/[?&]id=([\w-]+)/);return m?m[1]:'';}
+function photoBox(link){
+    if(!link)return '<div class="au-ph">No photo</div>';
+    var id=driveId(link),src=id?'https://drive.google.com/thumbnail?id='+id+'&sz=w400':link;
+    return '<a class="au-ph" href="'+_h(link)+'" target="_blank" rel="noopener"><img src="'+_h(src)+'" loading="lazy" alt="photo" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.textContent=\'📷 View photo\'"></a>';
+}
+function dmy(iso){var p=String(iso).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:iso;}
+function rangeOk(pfx,errId){
+    var f=document.getElementById(pfx+'_from').value,t=document.getElementById(pfx+'_to').value,e=document.getElementById(errId);
+    if(!f||!t||f>t){e.textContent='❌ Select a valid date range.';e.style.display='block';return null;}
+    return {from:f,to:t,branch:document.getElementById(pfx+'_branch').value};
+}
+
+/* ═══ AUDIT ═══ */
+function auLoad(){
+    var r=rangeOk('au','au_err');if(!r)return;
+    adminFetch({action:'getAudit',branch:r.branch,from:r.from,to:r.to},'au_err','au_btn',function(d){
+        var h='<div class="au-sum">'+d.total+' entries · '+d.withLocation+' with location · '+d.withPhoto+' with photo'+(d.truncated?' · showing latest 500':'')+'</div>';
+        if(!d.items.length)h+='<p style="text-align:center;color:#70757a;padding:24px 0;">No entries for this selection.</p>';
+        d.items.forEach(function(it){
+            h+='<div class="au-card">'+photoBox(it.photoLink)+'<div class="au-info">'
+              +'<b>'+_h(it.ownerName||'—')+'</b><br>🏪 '+_h(it.shopName||'—')+'<br>'
+              +(it.location?'📍 '+_h(it.location)+' <a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(it.location)+'" target="_blank" rel="noopener">Map</a>':'<span class="au-meta">📍 No location</span>')
+              +'<br><span class="au-meta">'+dmy(it.date)+' · '+_h(it.branch)+' · '+_h(it.execName)+(it.empCode?' ('+_h(it.empCode)+')':'')+'</span></div></div>';
+        });
+        document.getElementById('au_results').innerHTML=h;
+    });
+}
+
+/* ═══ PASSBOOK ═══ */
+function pbSwitch(w){
+    document.getElementById('pb-exec').classList.toggle('hidden',w!=='exec');
+    document.getElementById('pb-admin').classList.toggle('hidden',w!=='admin');
+    document.getElementById('pbt-exec').classList.toggle('active',w==='exec');
+    document.getElementById('pbt-admin').classList.toggle('active',w==='admin');
+    applyAdminState();
+}
+var _pbPhoto=null;
+function pbPhotoPicked(inp){
+    var st=document.getElementById('pb_photoSt'),pv=document.getElementById('pb_preview');
+    _pbPhoto=null;pv.style.display='none';st.textContent='';
+    if(!inp.files||!inp.files[0])return;
+    st.textContent='⏳ Preparing photo…';
+    compressImage(inp.files[0],1600,0.8).then(function(d){
+        _pbPhoto={data:d.split(',')[1],type:'image/jpeg'};
+        pv.src=d;pv.style.display='block';
+        st.textContent='✅ Photo ready ('+Math.round(_pbPhoto.data.length*0.75/1024)+' KB)';
+    }).catch(function(e){st.textContent='❌ '+e.message;inp.value='';});
+}
+document.getElementById('pbForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var ok=document.getElementById('pb_ok'),er=document.getElementById('pb_err'),btn=document.getElementById('pb_submitBtn');
+    ok.style.display='none';er.style.display='none';
+    function fail(m){er.textContent='❌ '+m;er.style.display='block';btn.textContent='Submit Passbook Visit';btn.disabled=false;}
+    if(!_pbPhoto){er.textContent='❌ Attach the passbook photo.';er.style.display='block';return;}
+    var g=function(i){return document.getElementById(i).value.trim();};
+    var pl={action:'passbookSubmit',date:_todayIso(),branch:g('pb_branch'),execName:g('pb_execName'),empCode:g('pb_empCode'),
+            loanNumber:g('pb_loan'),customerName:g('pb_customer'),photoData:_pbPhoto.data,photoType:_pbPhoto.type};
+    btn.textContent='⏳ Uploading…';btn.disabled=true;
+    fetch(GAS_URL,{method:'POST',body:JSON.stringify(pl)}).then(function(r){return r.json();}).then(function(d){
+        if(d.result!=='success')return fail(d.error||'Server rejected the entry.');
+        ok.style.display='block';
+        ['pb_loan','pb_customer','pb_photo'].forEach(function(i){document.getElementById(i).value='';});   // keep code/branch/name for the next customer
+        _pbPhoto=null;document.getElementById('pb_preview').style.display='none';document.getElementById('pb_photoSt').textContent='';
+        btn.textContent='Submit Passbook Visit';btn.disabled=false;window.scrollTo(0,0);
+    }).catch(function(){fail('Upload failed. Check your connection and try again.');});
+});
+function paLoad(){
+    var r=rangeOk('pa','pa_err');if(!r)return;
+    adminFetch({action:'getPassbook',branch:r.branch,from:r.from,to:r.to},'pa_err','pa_btn',function(d){
+        var h='<div class="stat-row"><div class="stat"><b>'+d.total+'</b><small>Visits</small></div><div class="stat"><b>'+d.customers+'</b><small>Customers</small></div><div class="stat"><b>'+d.executives.length+'</b><small>Executives</small></div></div>';
+        if(!d.items.length){h+='<p style="text-align:center;color:#70757a;padding:24px 0;">No passbook visits for this selection.</p>';}
+        else{
+            h+='<div class="section-title">Visits by Executive</div><div style="overflow-x:auto"><table class="pb-t"><tr><th>Executive</th><th>Code</th><th>Branch</th><th style="text-align:right">Visits</th></tr>';
+            d.executives.forEach(function(x){h+='<tr><td>'+_h(x.execName)+'</td><td>'+_h(x.empCode)+'</td><td>'+_h(x.branch)+'</td><td style="text-align:right"><b>'+x.visits+'</b></td></tr>';});
+            h+='</table></div><div class="section-title">Visit Details'+(d.truncated?' (latest 500)':'')+'</div>';
+            d.items.forEach(function(it){
+                h+='<div class="au-card">'+photoBox(it.photoLink)+'<div class="au-info"><b>'+_h(it.customerName)+'</b><br>Loan: '+_h(it.loanNumber)
+                  +'<br><span class="au-meta">'+dmy(it.date)+' · '+_h(it.branch)+' · '+_h(it.execName)+(it.empCode?' ('+_h(it.empCode)+')':'')+'</span></div></div>';
+            });
+        }
+        document.getElementById('pa_results').innerHTML=h;
+    });
+}
 
 /* ═══ LEAD PHOTO ═══ */
 var _leadPhoto=null;
@@ -786,7 +1059,7 @@ document.getElementById('leadForm').addEventListener('submit',function(e){
         otherProduct:otherProdSel.value,notIntReason:notIntSel.value,exLoan:exLoanSel.value,exLoanType:exLoanType.value,
         exLoanWhere:exLoanWhere.value.trim(),exLoanAmount:exLoanAmt.value});
     fetch(GAS_URL+'?'+p,{method:'GET',mode:'no-cors',redirect:'follow'})
-    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();_loc=null;_leadPhoto=null;document.getElementById('f_preview').style.display='none';document.getElementById('f_photoSt').textContent='';lockIdent(false);document.getElementById('empStatus').textContent='';captureLocation(true).catch(function(){});
+    .then(function(){document.getElementById('successMsg').style.display='block';document.getElementById('leadForm').reset();_loc=null;_leadPhoto=null;document.getElementById('f_preview').style.display='none';document.getElementById('f_photoSt').textContent='';leadEmp.reset();captureLocation(true).catch(function(){});
         document.getElementById('f_date').valueAsDate=new Date();updateLoanUI();bizSel.innerHTML='<option value="">-- Select Sector First --</option>';
         bizGroup.classList.remove('hidden');otherGroup.classList.add('hidden');bizSel.required=true;otherInput.required=false;
         btn.textContent='Submit Lead';btn.disabled=false;window.scrollTo(0,0);})
