@@ -672,7 +672,7 @@ function osAt(brs, mi){
 }
 function fyQ(m){ var q = m.m >= 4 && m.m <= 6 ? 1 : m.m >= 7 && m.m <= 9 ? 2 : m.m >= 10 ? 3 : 4, fy = m.m >= 4 ? m.y + 1 : m.y; return 'Q' + q + ' FY' + String(fy).slice(2); }
 
-function renderOS(){
+function renderOSOverview(){
   var T = S.T;
   if (S.errT) return '<div class="vp-card"><div class="vp-empty"><b>OS / TA data could not be loaded</b>' + esc(S.errT) + '</div></div>';
   var idxs = monthIdxInRange();
@@ -796,6 +796,118 @@ function renderOS(){
   h += card('Month-wise OS', 'Growth is measured against the actual previous month, even when it falls outside the selected dates',
     '<div class="vp-tw nomax"><table class="vp-t"><thead><tr><th>Month</th><th>Accts</th><th>OS (₹ L)</th><th>Δ ₹ L</th><th>MoM ₹</th><th>MoM accts</th><th>QoQ ₹</th><th>Ticket (₹ L)</th><th>Branches</th></tr></thead><tbody>' + mrows + '</tbody></table></div>');
   return h;
+}
+
+/* ════════════════════════════════════════
+   OS → COMPARE  (pick several branches, compare every metric)
+════════════════════════════════════════ */
+S.osView = 'overview'; S.cmp = null; S.cmpMetric = 'amt';
+var CMP_COL = ['#1a73e8', '#d93025', '#188038', '#f29900', '#8430ce', '#00897b', '#e91e63', '#5d4037', '#455a64', '#7cb342'];
+
+function osSeg(){
+  return '<div class="vp-seg"><button data-act="osview" data-v="overview" class="' + (S.osView === 'overview' ? 'on' : '') + '">📊 Overview</button><button data-act="osview" data-v="compare" class="' + (S.osView === 'compare' ? 'on' : '') + '">⚖️ Compare branches</button></div>';
+}
+function renderOS(){
+  if (S.errT) return '<div class="vp-card"><div class="vp-empty"><b>OS / TA data could not be loaded</b>' + esc(S.errT) + '</div></div>';
+  return osSeg() + (S.osView === 'compare' ? renderCompare() : renderOSOverview());
+}
+function renderCompare(){
+  var T = S.T, M = T.months, idxs = [];
+  M.forEach(function (m, i) { if (m.end >= S.from && m.start <= S.to && T.branches.some(function (b) { return T.os[b][i]; })) idxs.push(i); });
+  if (!idxs.length) return empty('No OS data in the selected dates', 'OS data is available for ' + M[0].label + ' → ' + M[M.length - 1].label + '.<br><br><button class="vp-btn sm" data-act="latest">Show available months</button>');
+  var first = idxs[0], last = idxs[idxs.length - 1], all = T.branches.filter(function (b) { return T.os[b][last]; });
+  all.sort(function (a, b) { return T.os[b][last].amt - T.os[a][last].amt; });
+  if (!S.cmp) S.cmp = all.slice(0, 3);
+  S.cmp = S.cmp.filter(function (b) { return all.indexOf(b) > -1; });
+  var sel = all.filter(function (b) { return S.cmp.indexOf(b) > -1; });       /* keep table order by size */
+  var grp = osAt(T.branches, last);
+
+  var h = '<div class="vp-card"><div class="vp-h">Pick branches to compare <span class="vp-chip vp-na">' + sel.length + ' selected · max 10</span></div><div class="vp-sub">Tap branches to add or remove them · the branch filter above is ignored in this view, the date range still applies</div>' +
+    '<div class="vp-seg" style="margin-bottom:8px">' + all.map(function (b) {
+      var k = sel.indexOf(b), on = k > -1;
+      return '<button data-act="cmptoggle" data-v="' + esc(b) + '" class="' + (on ? 'on' : '') + '">' + (on ? '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:' + CMP_COL[k % 10] + '"></span>' : '') + esc(titleCase(b)) + '</button>';
+    }).join('') + '</div><div class="vp-chips" style="margin-top:0"><button data-act="cmpset" data-v="top5">Top 5 by OS</button><button data-act="cmpset" data-v="bottom5">Smallest 5</button><button data-act="cmpset" data-v="grow">Top 5 growth (MoM)</button><button data-act="cmpset" data-v="drop">Top 5 declining</button><button data-act="cmpset" data-v="all">All</button><button data-act="cmpset" data-v="clear">Clear</button></div></div>';
+  if (sel.length < 2) return h + empty('Select at least two branches', 'Use the buttons above to choose branches to compare.');
+
+  /* metrics per branch */
+  var prevI = last - 1, q3 = last - 3, rankList = all.slice();
+  var D = sel.map(function (b, k) {
+    var a = T.os[b], r = a[last], p = a[prevI], q = a[q3], s0 = a[first];
+    var streak = 0; for (var i = last; i > 0 && a[i] && a[i - 1] && a[i].amt < a[i - 1].amt; i--) streak++;
+    var mom = p && p.amt ? growth(r.amt, p.amt) : null, since = (s0 && s0.amt && first !== last) ? growth(r.amt, s0.amt) : null;
+    return { b: b, col: CMP_COL[k % 10], amt: r.amt, n: r.n, tk: r.n ? r.amt / r.n : null, share: grp ? r.amt / grp.amt * 100 : null,
+      d: p ? r.amt - p.amt : null, mom: mom, momN: p && p.n ? growth(r.n, p.n) : null, qoq: q && q.amt ? growth(r.amt, q.amt) : null,
+      since: since, sinceN: (s0 && s0.n && first !== last) ? growth(r.n, s0.n) : null, tkCh: (p && p.n && r.n) ? growth(r.amt / r.n, p.amt / p.n) : null,
+      streak: streak, rank: rankList.indexOf(b) + 1, isNew: !(p && p.amt),
+      tag: !(p && p.amt) ? ['NEW', 'n'] : (since != null && since <= -20) ? ['RUN-OFF', 'r'] : (mom != null && mom >= 2) ? ['GROWING', 'g'] : (mom != null && mom <= -2) ? ['DECLINING', 'r'] : ['STABLE', 's'] };
+  });
+  var pc = function (v) { return v == null ? '—' : chip(v); };
+  var defs = [
+    ['OS amount (₹ L)', 'amt', function (x) { return lakh(x.amt); }, 1],
+    ['Share of group OS', 'share', function (x) { return x.share == null ? '—' : x.share.toFixed(1) + '%'; }, 1],
+    ['Rank by OS (of ' + all.length + ')', 'rank', function (x) { return '#' + x.rank; }, -1],
+    ['OS accounts', 'n', function (x) { return nfmt(x.n); }, 1],
+    ['Average ticket (₹ L)', 'tk', function (x) { return x.tk ? lakh(x.tk) : '—'; }, 1],
+    ['Δ OS vs ' + (prevI >= 0 ? M[prevI].label : 'prev') + ' (₹ L)', 'd', function (x) { return x.d == null ? '—' : (x.d >= 0 ? '+' : '') + lakh(x.d); }, 1],
+    ['MoM growth — amount', 'mom', function (x) { return x.isNew ? '<span class="vp-chip vp-new">NEW</span>' : pc(x.mom); }, 1],
+    ['MoM growth — accounts', 'momN', function (x) { return pc(x.momN); }, 1],
+    ['Ticket size change MoM', 'tkCh', function (x) { return pc(x.tkCh); }, 1],
+    ['QoQ growth' + (q3 >= 0 ? ' (vs ' + M[q3].label + ')' : ''), 'qoq', function (x) { return pc(x.qoq); }, 1],
+    ['Since ' + M[first].label + ' — amount', 'since', function (x) { return pc(x.since); }, 1],
+    ['Since ' + M[first].label + ' — accounts', 'sinceN', function (x) { return pc(x.sinceN); }, 1],
+    ['Months of consecutive decline', 'streak', function (x) { return x.streak ? x.streak : '·'; }, -1],
+    ['Status', null, function (x) { return '<span class="vp-tag ' + x.tag[1] + '">' + x.tag[0] + '</span>'; }, 0]
+  ];
+  var body = defs.map(function (d) {
+    var vals = d[1] ? D.map(function (x) { return x[d[1]]; }).filter(function (v) { return v != null; }) : [], best = null, worst = null;
+    if (d[3] && vals.length > 1) { var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals); if (mx !== mn) { best = d[3] > 0 ? mx : mn; worst = d[3] > 0 ? mn : mx; } }
+    return '<tr><td class="name">' + d[0] + '</td>' + D.map(function (x) {
+      var v = d[1] ? x[d[1]] : null, st = (best != null && v === best) ? ' style="background:#e6f4ea;font-weight:800"' : (worst != null && v === worst) ? ' style="background:#fce8e6"' : '';
+      return '<td' + st + '>' + d[2](x) + '</td>';
+    }).join('') + '</tr>';
+  }).join('');
+  h += card('Metric comparison · as of ' + M[last].label, '<span style="color:#137333;font-weight:700">Green</span> = best of the selected · <span style="color:#c5221f;font-weight:700">red</span> = weakest · growth is vs the actual previous month / quarter',
+    '<div class="vp-tw nomax"><table class="vp-t"><thead><tr><th>Metric</th>' + D.map(function (x) { return '<th><span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:' + x.col + '"></span>' + esc(titleCase(x.b)) + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>');
+
+  /* trend chart + month matrix, switchable metric */
+  var mets = [['amt', 'OS amount'], ['n', 'Accounts'], ['tk', 'Avg ticket']], mt = S.cmpMetric;
+  function val(b, i){ var r = T.os[b][i]; if (!r || !(r.amt || r.n)) return null; return mt === 'amt' ? r.amt : mt === 'n' ? r.n : (r.n ? r.amt / r.n : null); }
+  function fv(v){ return v == null ? '—' : mt === 'amt' ? lakh(v) : mt === 'n' ? nfmt(v) : lakh(v); }
+  var base = {}; D.forEach(function (x) { base[x.b] = val(x.b, first); });
+  var series = D.map(function (x) { return { x: x, v: idxs.map(function (i) { var v = val(x.b, i); return (v != null && base[x.b]) ? v / base[x.b] * 100 : null; }) }; });
+  var all_ = []; series.forEach(function (s) { s.v.forEach(function (v) { if (v != null) all_.push(v); }); });
+  var lo = Math.min.apply(null, all_.concat(100)), hi = Math.max.apply(null, all_.concat(100)), pad = (hi - lo) * .08 || 5; lo -= pad; hi += pad;
+  var n = idxs.length, svg = '<line x1="0" x2="100" y1="' + (100 - (100 - lo) / (hi - lo) * 100).toFixed(2) + '" y2="' + (100 - (100 - lo) / (hi - lo) * 100).toFixed(2) + '" stroke="#bdc1c6" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>';
+  series.forEach(function (s) {
+    var pts = []; s.v.forEach(function (v, k) { if (v != null) pts.push(((n > 1 ? k / (n - 1) * 96 + 2 : 50)).toFixed(2) + ',' + (100 - (v - lo) / (hi - lo) * 100).toFixed(2)); });
+    svg += '<polyline fill="none" stroke="' + s.x.col + '" stroke-width="2.2" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="' + pts.join(' ') + '"><title>' + esc(titleCase(s.x.b)) + '</title></polyline>';
+  });
+  h += card('Trend — indexed to ' + M[first].label + ' = 100', 'Lets small and large branches be compared fairly · dashed line = starting level (100)',
+    '<div class="vp-seg">' + mets.map(function (m) { return '<button data-act="cmpmetric" data-v="' + m[0] + '" class="' + (mt === m[0] ? 'on' : '') + '">' + m[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="vp-chart"><span class="mx">' + hi.toFixed(0) + '</span><svg viewBox="0 0 100 100" preserveAspectRatio="none">' + svg + '</svg></div><div class="vp-xl">' + idxs.map(function (i) { return '<span>' + M[i].label + '</span>'; }).join('') + '</div>' +
+    '<div class="vp-leg">' + series.map(function (s) { var l = s.v[s.v.length - 1]; return '<span><i style="background:' + s.x.col + '"></i>' + esc(titleCase(s.x.b)) + (l != null ? ' <b style="color:#202124">' + (l - 100 >= 0 ? '+' : '') + (l - 100).toFixed(1) + '%</b>' : '') + '</span>'; }).join('') + '</div>');
+
+  var mrows = idxs.slice().reverse().map(function (i) {
+    return '<tr><td class="name">' + M[i].label + '</td>' + D.map(function (x) {
+      var v = val(x.b, i), pv = i > 0 ? val(x.b, i - 1) : null; return '<td>' + fv(v) + (v != null && pv ? ' ' + chip(growth(v, pv)) : '') + '</td>';
+    }).join('') + '</tr>';
+  }).join('');
+  h += card('Month-wise · ' + mets.filter(function (m) { return m[0] === mt; })[0][1] + (mt === 'n' ? '' : ' (₹ L)'), 'Chip = growth over previous month · switch the metric with the buttons in the chart card above',
+    '<div class="vp-tw nomax"><table class="vp-t"><thead><tr><th>Month</th>' + D.map(function (x) { return '<th><span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:' + x.col + '"></span>' + esc(titleCase(x.b)) + '</th>'; }).join('') + '</tr></thead><tbody>' + mrows + '</tbody></table></div>');
+
+  /* insights */
+  var ins = [], by = function (k, dir) { return D.filter(function (x) { return x[k] != null; }).sort(function (a, b) { return dir * (b[k] - a[k]); }); };
+  var big = by('amt', 1)[0], sm = by('amt', -1)[0];
+  if (big && sm && big !== sm) ins.push({ i: '📏', t: '<b>' + titleCase(big.b) + '</b> is ' + (sm.amt ? (big.amt / sm.amt).toFixed(1) : '—') + '× the size of <b>' + titleCase(sm.b) + '</b> (' + inr(big.amt) + ' vs ' + inr(sm.amt) + ').' });
+  var gm = by('mom', 1), gs = by('since', 1);
+  if (gm.length > 1) ins.push({ i: '🚀', c: 'g', t: '<b>Fastest MoM:</b> ' + titleCase(gm[0].b) + ' (' + (gm[0].mom >= 0 ? '+' : '') + gm[0].mom.toFixed(1) + '%) · <b>slowest:</b> ' + titleCase(gm[gm.length - 1].b) + ' (' + (gm[gm.length - 1].mom >= 0 ? '+' : '') + gm[gm.length - 1].mom.toFixed(1) + '%).' });
+  if (gs.length > 1) ins.push({ i: '📅', c: gs[gs.length - 1].since < 0 ? 'a' : '', t: '<b>Since ' + M[first].label + ':</b> ' + titleCase(gs[0].b) + ' grew ' + gs[0].since.toFixed(1) + '% while ' + titleCase(gs[gs.length - 1].b) + ' moved ' + (gs[gs.length - 1].since >= 0 ? '+' : '') + gs[gs.length - 1].since.toFixed(1) + '% — a gap of ' + (gs[0].since - gs[gs.length - 1].since).toFixed(1) + ' points.' });
+  var tk = by('tk', 1); if (tk.length > 1) ins.push({ i: '🎟️', t: '<b>Ticket size:</b> highest at ' + titleCase(tk[0].b) + ' (' + inr(tk[0].tk) + '), lowest at ' + titleCase(tk[tk.length - 1].b) + ' (' + inr(tk[tk.length - 1].tk) + ').' });
+  var st = D.filter(function (x) { return x.streak >= 2; }); if (st.length) ins.push({ i: '🔻', c: 'r', t: '<b>Declining streak:</b> ' + st.map(function (x) { return titleCase(x.b) + ' (' + x.streak + ' months)'; }).join(', ') + '.' });
+  var dv = D.filter(function (x) { return x.mom != null && x.momN != null && ((x.mom > 0) !== (x.momN > 0)) && Math.abs(x.mom - x.momN) >= 2; });
+  if (dv.length) ins.push({ i: '🧮', c: 'a', t: '<b>Amount and accounts moving in opposite directions:</b> ' + dv.map(function (x) { return titleCase(x.b) + ' (amount ' + (x.mom >= 0 ? '+' : '') + x.mom.toFixed(1) + '%, accounts ' + (x.momN >= 0 ? '+' : '') + x.momN.toFixed(1) + '%)'; }).join(', ') + '.' });
+  ins.push({ i: '🏛️', t: 'Together the selected branches hold <b>' + sum(D, function (x) { return x.share || 0; }).toFixed(1) + '%</b> of group OS.' });
+  return h + card('💡 Insights', 'Based on the branches you selected', insights(ins));
 }
 
 /* ════════════════════════════════════════
@@ -1406,6 +1518,10 @@ function onClick(e){
     case 'logout': S.ok = false; S.T = S.V = null; S.loaded = false; S.branch = 'All'; S.staff = 'All'; S.from = S.to = NaN; mount(); break;
     case 'refresh': load(); break;
     case 'tab': S.tab = v; paint(); break;
+    case 'osview': S.osView = v; paint(); break;
+    case 'cmptoggle': { S.cmp = S.cmp || []; var ix = S.cmp.indexOf(v); if (ix > -1) S.cmp.splice(ix, 1); else if (S.cmp.length < 10) S.cmp.push(v); paint(); break; }
+    case 'cmpmetric': S.cmpMetric = v; paint(); break;
+    case 'cmpset': cmpPreset(v); paint(); break;
     case 'taview': S.ta = v; paint(); break;
     case 'range': setRange(v); paint(); break;
     case 'latest': if (S.T) { var m = S.T.months[S.T.months.length - 1]; S.from = m.start; S.to = m.end; syncFilters(); paint(); } break;
@@ -1421,6 +1537,17 @@ function onClick(e){
     case 'dupscope': S.dupScope = v; S.dupShown = 25; S.dupOpen = {}; paint(); break;
     case 'csv': downloadCSV(v === 'dup' ? 'VP_duplicate_mobiles.csv' : 'VP_date_wise_activity.csv', v === 'dup' ? LAST.dupRows : LAST.dateRows); break;
   }
+}
+function cmpPreset(kind){
+  var T = S.T, idx = T.months.length - 1, a = T.branches.filter(function (b) { return T.os[b][idx]; });
+  function mom(b){ var r = T.os[b][idx], p = T.os[b][idx - 1]; return (r && p && p.amt) ? growth(r.amt, p.amt) : -1e9; }
+  var cur = function (b) { return T.os[b][idx].amt; };
+  if (kind === 'top5') S.cmp = a.sort(function (x, y) { return cur(y) - cur(x); }).slice(0, 5);
+  else if (kind === 'bottom5') S.cmp = a.sort(function (x, y) { return cur(x) - cur(y); }).slice(0, 5);
+  else if (kind === 'grow') S.cmp = a.sort(function (x, y) { return mom(y) - mom(x); }).slice(0, 5);
+  else if (kind === 'drop') S.cmp = a.filter(function (b) { return mom(b) > -1e9; }).sort(function (x, y) { return mom(x) - mom(y); }).slice(0, 5);
+  else if (kind === 'all') S.cmp = a.sort(function (x, y) { return cur(y) - cur(x); }).slice(0, 10);
+  else S.cmp = [];
 }
 function scrollTop_(){ var f = $('vp-filters'); if (f && f.scrollIntoView) f.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function onChange(e){
