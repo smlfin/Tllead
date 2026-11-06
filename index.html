@@ -207,6 +207,7 @@
     <button class="menu-item" data-tab="admin" onclick="switchTab('admin')">🛡️ Admin MIS</button>
     <button class="menu-item" data-tab="sbl" onclick="switchTab('sbl')">🏪 SBL</button>
     <button class="menu-item" data-tab="audit" onclick="switchTab('audit')">🔍 Audit 🔒</button>
+    <button class="menu-item" data-tab="vp" onclick="switchTab('vp')">📈 VP 🔒</button>
     <div class="menu-sep"></div>
     <button class="menu-item" onclick="window.location.href='bm-login.html'">👤 BM Login</button>
 </nav>
@@ -663,13 +664,18 @@
 </div>
 </div>
 
+<!-- ═══════════════════════════════════════
+     VP — OS · TA · Visit  (logic lives in vp.js)
+═══════════════════════════════════════ -->
+<div id="tab-vp" class="tab-panel"><div id="vp-root"></div></div>
+
 </div><!-- /main-wrap -->
 
 <script>
 /* ═══════════════════════════════════
    CONFIG — update GAS URL if redeployed
 ═══════════════════════════════════ */
-const GAS_URL    = 'https://script.google.com/macros/s/AKfycby8s9yDFaXGs0DK1W6chdm4iWx2nEm_KTGIE7fGbz974k84QRA7FxA3nmzViOHyiVwx/exec';
+const GAS_URL    = 'https://script.google.com/macros/s/AKfycbwss1eHS6K6vxzRPqjee2FRw0s3av_7t-rZmB-gKwJxPIlGFlz_VbcLXFzjM3khX74L/exec';
 const ADMIN_PASS = 'sml@123'; // ← change to your admin password
 const SBL_PASS   = 'SBL123'; // ← password for the SBL report tab
 
@@ -1628,5 +1634,6 @@ function mCard(label,val,sub,pct){
           +'<div class="mc-sub"'+sc+'>'+sub+'</div></div>';
 }
 </script>
+<script src="vp.js" charset="utf-8"></script>
 </body>
 </html>
