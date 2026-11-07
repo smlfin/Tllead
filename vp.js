@@ -16,6 +16,8 @@ var VP_PASS   = 'vp123';
 var TLOS_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVsWPB-TdY99_DunQrRe4HLDWMsPLFYvbY4n_ZBjbm40TYQXoeln7O-o3o9RcmZAnkP-D3NAl0nA7Y/pub?gid=485030439&single=true&output=csv';
 var SHEET1_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVsWPB-TdY99_DunQrRe4HLDWMsPLFYvbY4n_ZBjbm40TYQXoeln7O-o3o9RcmZAnkP-D3NAl0nA7Y/pub?gid=0&single=true&output=csv';
 
+var RR_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVsWPB-TdY99_DunQrRe4HLDWMsPLFYvbY4n_ZBjbm40TYQXoeln7O-o3o9RcmZAnkP-D3NAl0nA7Y/pub?gid=1584921173&single=true&output=csv';   /* Daily RR tab */
+
 /* Official branch names (same list as the backend). Anything spelled slightly
    differently in a sheet is mapped onto these automatically. */
 var CANON = ['KUNNAMKULAM','PARAVOOR','HARIPPAD','KATTAPPANA','MATTANCHERY','PATHANAMTHITTA','KOTTAYAM',
@@ -1414,6 +1416,166 @@ function dupList(groups){
 }
 
 /* ════════════════════════════════════════
+   DAILY RR — target vs current OS, required run-rate per working day (Sundays excluded)
+   Sheet columns: BRANCH | OS NO | OS AMOUNT | Current OS NO | OS AMOUNT | Count Target | Amount Target
+════════════════════════════════════════ */
+S.R = null; S.errR = '';
+S.rr = { asof: NaN, end: NaN, hol: '', today: true, mode: 'abs' };
+S.sort.rrn = { k: 'need', d: -1 }; S.sort.rra = { k: 'need', d: -1 };
+
+function buildRR(rows){
+  var hi = -1, r;
+  for (r = 0; r < Math.min(rows.length, 8); r++) { if (rows[r].some(function (x) { return /^\s*branch/i.test(x); })) { hi = r; break; } }
+  if (hi < 0) throw new Error('Daily RR tab: header row with BRANCH not found');
+  var hd = rows[hi].map(function (x) { return String(x).trim().toLowerCase(); });
+  function find(re, from){ for (var i = from || 0; i < hd.length; i++) if (re.test(hd[i])) return i; return -1; }
+  var C = { b: find(/^branch/) };
+  C.bn = find(/^os\s*no/); C.ba = find(/^os\s*amount/);
+  C.cn = find(/current.*no/); C.ca = C.cn > -1 ? find(/amount/, C.cn + 1) : -1;
+  if (C.ca < 0 || C.ca === C.ba) C.ca = find(/current.*amount/);
+  C.tn = find(/count\s*target/); C.ta = find(/amount\s*target/);
+  var fb = [0, 1, 2, 3, 4, 5, 6];                                   /* fall back to the column order you described */
+  if (C.b < 0) C.b = fb[0]; if (C.bn < 0) C.bn = fb[1]; if (C.ba < 0) C.ba = fb[2]; if (C.cn < 0) C.cn = fb[3]; if (C.ca < 0) C.ca = fb[4]; if (C.tn < 0) C.tn = fb[5]; if (C.ta < 0) C.ta = fb[6];
+  var out = [];
+  for (r = hi + 1; r < rows.length; r++) {
+    var row = rows[r], raw = String(row[C.b] || '').trim(), b = canonBranch(raw);
+    if (!b || /^(grand\s*)?total/i.test(raw)) continue;
+    var o = { b: b, bn: num(row[C.bn]), ba: num(row[C.ba]), cn: num(row[C.cn]), ca: num(row[C.ca]), tn: num(row[C.tn]), ta: num(row[C.ta]) };
+    if ([o.bn, o.ba, o.cn, o.ca, o.tn, o.ta].every(function (v) { return v == null; })) continue;
+    ['bn', 'ba', 'cn', 'ca', 'tn', 'ta'].forEach(function (k) { if (o[k] == null) o[k] = 0; });
+    out.push(o);
+  }
+  if (!out.length) throw new Error('Daily RR tab: no branch rows found');
+  return { rows: out };
+}
+
+/* working days between two day-numbers (inclusive), skipping Sundays and any listed holidays */
+function holSet(){
+  var o = {}; String(S.rr.hol || '').split(/[,;\s]+/).forEach(function (t) { var d = parseDay(t, 'dmy'); if (!isNaN(d)) o[d] = 1; }); return o;
+}
+function workDays(a, z, hol){
+  var n = 0; for (var d = a; d <= z; d++) { if (dayParts(d).w !== 0 && !hol[d]) n++; } return n;
+}
+function fvN(v){ return v == null ? '—' : (Math.abs(v - Math.round(v)) < .05 ? nfmt(v) : (Math.abs(v) < 10 ? (Math.round(v * 10) / 10).toString() : nfmt(v))); }
+function multTxt(m){ return m == null ? '' : (m > 1 ? ' → needs <b>' + m.toFixed(1) + '×</b> the current pace' : ' → required pace is within the current pace'); }
+function rrStatus(need, req, pace, elapsed){
+  if (need <= 0) return ['ACHIEVED', 'g'];
+  if (pace == null || elapsed <= 0) return ['NOT STARTED', 's'];
+  if (pace <= 0) return ['NO PROGRESS', 'r'];
+  var k = req / pace;
+  return k <= 1 ? ['ON TRACK', 'g'] : k <= 1.5 ? ['AT RISK', 'a'] : ['BEHIND', 'r'];
+}
+function rrCalc(b, c, T, elapsed, rem){
+  /* b = opening OS (last month-end) · c = current OS · T = growth TARGET to add this month */
+  var added = c - b, need = Math.max(0, T - added), pace = elapsed > 0 ? added / elapsed : null, req = rem > 0 ? need / rem : need;
+  var projAdd = pace != null ? added + Math.max(pace, 0) * rem : null, st = rrStatus(need, req, pace, elapsed);
+  return { b: b, c: c, t: T, lvl: b + T, added: added, need: need, extra: Math.max(0, added - T), pct: T > 0 ? added / T * 100 : null,
+           req: req, pace: pace, projAdd: projAdd, projLvl: projAdd != null ? b + projAdd : null, projPct: (projAdd != null && T > 0) ? projAdd / T * 100 : null,
+           mult: (pace && pace > 0 && need > 0) ? req / pace : null, st: st, stS: st[0] };
+}
+function fsign(v, f){ return v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + f(Math.abs(v)); }
+
+function renderRR(){
+  if (S.errR) return '<div class="vp-card"><div class="vp-empty"><b>Daily RR data could not be loaded</b>' + esc(S.errR) + '<br><br>Check that the new tab is published as CSV.</div></div>';
+  var R = S.R, rr = S.rr, t0 = todayNum();
+  if (isNaN(rr.asof)) rr.asof = t0;
+  if (isNaN(rr.end)) { var pp = dayParts(rr.asof); rr.end = monthEnd(pp.y, pp.m); }
+  var ep = dayParts(rr.end), pStart = monthStart(ep.y, ep.m), hol = holSet();
+  var asof = rr.asof, end = rr.end;
+  var elapsed = workDays(pStart, rr.today ? asof - 1 : asof, hol), rem = end >= asof ? workDays(rr.today ? asof : asof + 1, end, hol) : 0;
+  var totalWd = workDays(pStart, end, hol), sundays = 0, hCnt = 0;
+  for (var d = pStart; d <= end; d++) { if (dayParts(d).w === 0) sundays++; else if (hol[d]) hCnt++; }
+  var calLeft = Math.max(0, end - asof + (rr.today ? 1 : 0));
+
+  var rows = R.rows.filter(function (x) { return S.branch === 'All' || x.b === S.branch; });
+  if (!rows.length) return empty('No Daily RR row for ' + esc(S.branch), 'This branch is not in the target sheet.');
+  var D = rows.map(function (x) { return { b: x.b, n: rrCalc(x.bn, x.cn, x.tn, elapsed, rem), a: rrCalc(x.ba, x.ca, x.ta, elapsed, rem) }; });
+  var G = { n: rrCalc(sum(rows, function (x) { return x.bn; }), sum(rows, function (x) { return x.cn; }), sum(rows, function (x) { return x.tn; }), elapsed, rem),
+            a: rrCalc(sum(rows, function (x) { return x.ba; }), sum(rows, function (x) { return x.ca; }), sum(rows, function (x) { return x.ta; }), elapsed, rem) };
+
+  var h = '';
+  /* controls */
+  h += '<div class="vp-card"><div class="vp-h">Period &amp; working days</div><div class="vp-sub">Sundays are never counted. Add any other holidays to remove them from the days left.</div>' +
+    '<div class="vp-fgrid" style="margin-bottom:10px"><div><label>As-of date</label><input type="date" id="vp-rrasof" value="' + dayIso(asof) + '"></div><div><label>Target date (period end)</label><input type="date" id="vp-rrend" value="' + dayIso(end) + '"></div>' +
+    '<div style="grid-column:span 2"><label>Extra holidays (optional, e.g. 2026-11-14, 25/11/2026)</label><input type="text" id="vp-rrhol" placeholder="none" value="' + esc(rr.hol) + '"></div></div>' +
+    '<div class="vp-seg" style="margin-bottom:6px"><button data-act="rrtoday" data-v="1" class="' + (rr.today ? 'on' : '') + '">Today counts as a remaining day</button><button data-act="rrtoday" data-v="0" class="' + (!rr.today ? 'on' : '') + '">Today already over</button></div>' +
+    '<div class="vp-note"><b>How it is read:</b> Opening OS = last month-end. <b>Added so far</b> = Current OS − Opening OS. The <b>Target</b> is what must be <b>added this month</b> on top of the opening OS, so <b>Balance = Target − Added so far</b>, worked out separately for count and for amount.</div></div>';
+
+  h += '<div class="vp-kpis">' + kpi('Working days left', rem, '<span>' + dayDMY(rr.today ? asof : asof + 1) + ' → ' + dayDMY(end) + '</span>', rem <= 3 ? 'c-red' : 'c-green') +
+    kpi('Working days gone', elapsed, '<span>of ' + totalWd + ' in ' + MONN[ep.m - 1] + ' ' + ep.y + '</span>', 'c-teal') +
+    kpi('Calendar days left', calLeft, '<span>' + (function () { var s = 0; for (var q = (rr.today ? asof : asof + 1); q <= end; q++) if (dayParts(q).w === 0) s++; return s; })() + ' Sundays excluded' + (hCnt ? ' · ' + hCnt + ' holiday' + (hCnt > 1 ? 's' : '') : '') + '</span>', 'c-purple') +
+    kpi('Period progress', totalWd ? Math.round(elapsed / totalWd * 100) + '%' : '—', '<span>of working days used</span>', 'c-call') + '</div>';
+  if (rem === 0) h += '<div class="vp-warn">⏱️ No working days remain before the target date, so the whole balance is shown as due now.</div>';
+
+  /* hero: count and amount */
+  function hero(title, g, fv){
+    var pct = g.pct == null ? 0 : Math.max(0, Math.min(100, g.pct)), col = g.st[1] === 'g' ? '#34a853' : g.st[1] === 'a' ? '#fbbc04' : g.st[1] === 'r' ? '#ea4335' : '#9aa0a6';
+    return '<div class="vp-hero"><div class="vp-hl">' + title + ' · ' + (S.branch === 'All' ? 'all branches' : esc(titleCase(S.branch))) + '</div><div class="vp-hv">' + fsign(g.added, fv) + ' <span style="font-size:15px;opacity:.8;font-weight:600">added of ' + fv(g.t) + ' target</span></div>' +
+      '<div style="background:rgba(255,255,255,.22);border-radius:8px;height:10px;overflow:hidden;margin:2px 0 10px"><div style="width:' + pct.toFixed(1) + '%;height:100%;background:' + col + '"></div></div>' +
+      '<div class="vp-hrow"><span class="vp-pill">Target achieved ' + (g.pct == null ? '—' : g.pct.toFixed(1) + '%') + '</span><span class="vp-pill"><b>' + g.st[0] + '</b></span></div>' +
+      '<div class="vp-hnote" style="font-size:13px;line-height:1.8">OS now <b>' + fv(g.c) + '</b> · opening <b>' + fv(g.b) + '</b> · target level <b>' + fv(g.lvl) + '</b><br>' +
+      (g.need > 0 ? 'Balance still to add <b>' + fv(g.need) + '</b><br>Required per working day <b>' + fv(g.req) + '</b><br>' : 'Target <b>achieved</b> — <b>' + fv(g.extra) + '</b> added beyond target<br>') +
+      'Pace so far <b>' + (g.pace == null ? '—' : fsign(g.pace, fv)) + '</b> per working day' + multTxt(g.mult) +
+      (g.projAdd != null ? '<br>Projected addition by ' + dayShort(end) + ': <b>' + fsign(g.projAdd, fv) + '</b> (' + g.projPct.toFixed(0) + '% of target) → OS ≈ ' + fv(g.projLvl) : '') + '</div></div>';
+  }
+  h += '<div class="vp-two">' + hero('OS COUNT (OS NO)', G.n, fvN) + hero('OS AMOUNT', G.a, inr) + '</div>';
+
+  /* per-branch tables */
+  function table(title, key, p, cell){
+    var cur = S.sort[key], list = D.map(function (x) { var m = x[p]; return { b: x.b, name: titleCase(x.b), base: m.b, c: m.c, added: m.added, t: m.t, lvl: m.lvl, need: m.need, extra: m.extra, pct: m.pct, req: m.req, pace: m.pace, projAdd: m.projAdd, projPct: m.projPct, mult: m.mult, stS: m.stS, st: m.st }; });
+    list = sortBy(list, cur);
+    var mx = Math.max.apply(null, list.map(function (r) { return r.need; }).concat(1));
+    function ad(v){ return '<span style="color:' + (v > 0 ? '#137333' : v < 0 ? '#c5221f' : '#5f6368') + ';font-weight:700">' + fsign(v, cell) + '</span>'; }
+    var body = list.map(function (r) {
+      return '<tr><td class="name"><a class="vp-lnk" data-act="rrbranch" data-v="' + esc(r.b) + '">' + esc(r.name) + '</a></td><td>' + cell(r.base) + '</td><td>' + cell(r.c) + '</td><td>' + ad(r.added) + '</td><td>' + cell(r.t) + '</td><td>' + cell(r.lvl) + '</td><td>' + (r.pct == null ? '—' : r.pct.toFixed(0) + '%') + '</td><td><b>' + (r.need > 0 ? cell(r.need) : '<span style="color:#137333">✔ +' + cell(r.extra) + '</span>') + '</b>' + (r.need > 0 ? '<span class="bar" style="width:' + Math.max(2, r.need / mx * 46).toFixed(0) + 'px"></span>' : '') + '</td><td><b>' + (r.need > 0 ? cell(r.req) : '—') + '</b></td><td>' + (r.pace == null ? '—' : fsign(r.pace, cell)) + '</td><td>' + (r.mult ? r.mult.toFixed(1) + '×' : '—') + '</td><td>' + (r.projAdd == null ? '—' : fsign(r.projAdd, cell)) + (r.projPct != null ? ' <span style="color:#5f6368;font-size:11px">(' + r.projPct.toFixed(0) + '%)</span>' : '') + '</td><td class="l"><span class="vp-tag ' + r.st[1] + '">' + r.st[0] + '</span></td></tr>';
+    }).join('');
+    var g = G[p];
+    return card(title, 'Opening = last month-end · Added = Current − Opening · Balance = Target − Added · required per day = balance ÷ ' + rem + ' working day' + (rem === 1 ? '' : 's') + ' · pace = added ÷ ' + elapsed + ' working day' + (elapsed === 1 ? '' : 's') + ' · tap a column to sort',
+      '<div class="vp-tw"><table class="vp-t"><thead><tr>' + th('Branch', 'name', key, cur, 1) + th('Opening', 'base', key, cur) + th('Current', 'c', key, cur) + th('Added so far', 'added', key, cur) + th('Target to add', 't', key, cur) + th('Target level', 'lvl', key, cur) + th('Achieved', 'pct', key, cur) + th('Balance to add', 'need', key, cur) + th('Required / day', 'req', key, cur) + th('Pace / day', 'pace', key, cur) + th('Needs', 'mult', key, cur) + th('Projected add', 'projAdd', key, cur) + th('Status', 'stS', key, cur, 1) + '</tr></thead><tbody>' + body +
+      '<tr class="tot"><td>TOTAL</td><td>' + cell(g.b) + '</td><td>' + cell(g.c) + '</td><td>' + fsign(g.added, cell) + '</td><td>' + cell(g.t) + '</td><td>' + cell(g.lvl) + '</td><td>' + (g.pct == null ? '—' : g.pct.toFixed(0) + '%') + '</td><td>' + (g.need > 0 ? cell(g.need) : '✔') + '</td><td>' + (g.need > 0 ? cell(g.req) : '—') + '</td><td>' + (g.pace == null ? '—' : fsign(g.pace, cell)) + '</td><td>' + (g.mult ? g.mult.toFixed(1) + '×' : '—') + '</td><td>' + (g.projAdd == null ? '—' : fsign(g.projAdd, cell)) + '</td><td class="l"><span class="vp-tag ' + g.st[1] + '">' + g.st[0] + '</span></td></tr></tbody></table></div>');
+  }
+  var cN = fvN, cA = function (v) { return lakh(v); };
+  h += table('OS count (OS NO) — target vs added, branch-wise', 'rrn', 'n', cN);
+  h += table('OS amount — target vs added, branch-wise (₹ lakh)', 'rra', 'a', cA);
+
+  /* insights */
+  var ins = [];
+  function lst(a, f){ return a.map(f).join(', '); }
+  ins.push({ i: '📅', t: '<b>' + rem + ' working day' + (rem === 1 ? '' : 's') + ' left</b> until ' + dayDMY(end) + ' (' + calLeft + ' calendar days, ' + (function () { var s = 0; for (var q = (rr.today ? asof : asof + 1); q <= end; q++) if (dayParts(q).w === 0) s++; return s; })() + ' Sundays excluded). ' + elapsed + ' of ' + totalWd + ' working days are already gone.' });
+  ins.push({ i: '🏦', c: G.a.st[1] === 'g' ? 'g' : G.a.st[1] === 'r' ? 'r' : 'a', t: '<b>Amount:</b> added ' + fsign(G.a.added, inr) + ' of the ' + inr(G.a.t) + ' target (' + (G.a.pct == null ? '—' : G.a.pct.toFixed(0) + '%') + ') on an opening OS of ' + inr(G.a.b) + '. ' + (G.a.need > 0 ? '<b>' + inr(G.a.need) + ' still to add — ' + inr(G.a.req) + ' per working day</b>' + (G.a.pace != null ? ' against a pace of ' + fsign(G.a.pace, inr) + ' per day' + (G.a.mult ? (G.a.mult > 1 ? ' (' + G.a.mult.toFixed(1) + '× the current pace is needed)' : ' (current pace is enough)') : '') : '') + '.' : 'Target achieved, ' + inr(G.a.extra) + ' beyond target.') });
+  ins.push({ i: '🔢', c: G.n.st[1] === 'g' ? 'g' : G.n.st[1] === 'r' ? 'r' : 'a', t: '<b>Count:</b> added ' + fsign(G.n.added, nfmt) + ' of the ' + nfmt(G.n.t) + ' accounts targeted (' + (G.n.pct == null ? '—' : G.n.pct.toFixed(0) + '%') + ') from an opening ' + nfmt(G.n.b) + '. ' + (G.n.need > 0 ? '<b>' + nfmt(G.n.need) + ' more needed — ' + fvN(G.n.req) + ' per working day</b>' + (G.n.pace != null ? ' vs a pace of ' + fsign(G.n.pace, fvN) + '/day' : '') + '.' : 'Target achieved, ' + nfmt(G.n.extra) + ' beyond target.') });
+  if (S.branch === 'All') {
+    var A = D.filter(function (x) { return x.a.need > 0; }).sort(function (x, y) { return y.a.need - x.a.need; });
+    if (A.length) {
+      var top3 = A.slice(0, 3), tot = sum(A, function (x) { return x.a.need; });
+      ins.push({ i: '🎯', t: '<b>Largest amount balance:</b> ' + lst(top3, function (x) { return titleCase(x.b) + ' (' + inr(x.a.need) + ', ' + inr(x.a.req) + '/day)'; }) + ' — together ' + (sum(top3, function (x) { return x.a.need; }) / tot * 100).toFixed(0) + '% of what is pending.' });
+    }
+    var fell = D.filter(function (x) { return x.a.added < 0 || x.n.added < 0; });
+    if (fell.length) ins.push({ i: '📉', c: 'r', t: '<b>OS has fallen below the opening level:</b> ' + lst(fell, function (x) { return titleCase(x.b) + ' (' + (x.n.added < 0 ? 'count ' + fsign(x.n.added, nfmt) : '') + (x.n.added < 0 && x.a.added < 0 ? ', ' : '') + (x.a.added < 0 ? 'amount ' + fsign(x.a.added, inr) : '') + ')'; }) + ' — these branches must first recover before they can add.' });
+    var pr = D.filter(function (x) { return x.a.pct != null; }).sort(function (x, y) { return y.a.pct - x.a.pct; });
+    if (pr.length > 2) ins.push({ i: '🥇', t: '<b>Best against amount target:</b> ' + lst(pr.slice(0, 3), function (x) { return titleCase(x.b) + ' (' + x.a.pct.toFixed(0) + '%)'; }) + ' · <b>furthest behind:</b> ' + lst(pr.slice(-3).reverse(), function (x) { return titleCase(x.b) + ' (' + x.a.pct.toFixed(0) + '%)'; }) + '.' });
+    var beh = D.filter(function (x) { return x.a.st[0] === 'BEHIND' || x.a.st[0] === 'NO PROGRESS'; }).sort(function (x, y) { return (y.a.mult || 99) - (x.a.mult || 99); });
+    if (beh.length) ins.push({ i: '🚨', c: 'r', t: '<b>Behind on amount:</b> ' + lst(beh.slice(0, 5), function (x) { return titleCase(x.b) + (x.a.mult ? ' (needs ' + x.a.mult.toFixed(1) + '× pace)' : ' (no progress yet)'); }) + '.' });
+    var risk = D.filter(function (x) { return x.a.st[0] === 'AT RISK'; });
+    if (risk.length) ins.push({ i: '⚠️', c: 'a', t: '<b>At risk on amount:</b> ' + lst(risk, function (x) { return titleCase(x.b); }) + ' — pace is within 1.5× of what is required.' });
+    var ok = D.filter(function (x) { return x.a.st[0] === 'ACHIEVED' || x.a.st[0] === 'ON TRACK'; });
+    if (ok.length) ins.push({ i: '✅', c: 'g', t: '<b>Achieved / on track (amount):</b> ' + lst(ok, function (x) { return titleCase(x.b) + (x.a.st[0] === 'ACHIEVED' ? ' ✔' : ''); }) + '.' });
+    var bn = D.filter(function (x) { return x.n.st[0] === 'BEHIND' || x.n.st[0] === 'NO PROGRESS'; });
+    if (bn.length) ins.push({ i: '🔢', c: 'r', t: '<b>Behind on count:</b> ' + lst(bn.slice(0, 6), function (x) { return titleCase(x.b) + ' (' + nfmt(x.n.need) + ' accts, ' + fvN(x.n.req) + '/day)'; }) + '.' });
+    var split = D.filter(function (x) { return (x.a.st[1] === 'g') !== (x.n.st[1] === 'g') && x.a.need + x.n.need > 0; });
+    if (split.length) ins.push({ i: '🧮', c: 'a', t: '<b>Amount and count tell different stories:</b> ' + lst(split.slice(0, 5), function (x) { return titleCase(x.b) + ' (amount ' + x.a.st[0].toLowerCase() + ', count ' + x.n.st[0].toLowerCase() + ')'; }) + '.' });
+    var done = D.filter(function (x) { return x.a.need <= 0 && x.n.need <= 0; });
+    ins.push({ i: '🏁', t: '<b>' + done.length + ' of ' + D.length + ' branches</b> have already met both targets; ' + D.filter(function (x) { return x.a.need > 0 && x.n.need > 0; }).length + ' still need both.' });
+  } else {
+    var x = D[0];
+    ins.push({ i: '📍', t: '<b>' + titleCase(x.b) + ':</b> amount ' + (x.a.need > 0 ? inr(x.a.need) + ' to go (' + inr(x.a.req) + '/day)' : 'target met') + ' · count ' + (x.n.need > 0 ? nfmt(x.n.need) + ' to go (' + fvN(x.n.req) + '/day)' : 'target met') + '.' });
+    if (x.a.projAdd != null && x.a.need > 0) ins.push({ i: x.a.projPct >= 100 ? '✅' : '⚠️', c: x.a.projPct >= 100 ? 'g' : 'a', t: 'At the current pace the amount added by ' + dayShort(end) + ' would be <b>' + fsign(x.a.projAdd, inr) + '</b> (' + x.a.projPct.toFixed(0) + '% of the ' + inr(x.a.t) + ' target).' });
+  }
+  h += card('💡 Insights', 'Auto-generated · based on working days (Sundays excluded)', insights(ins));
+  return h;
+}
+
+/* ════════════════════════════════════════
    SHELL — login, filters, tabs, events
 ════════════════════════════════════════ */
 function mount(){
@@ -1430,7 +1592,7 @@ function doLogin(){
 }
 function renderApp(){
   $('vp-root').innerHTML = '<div class="vp"><div class="vp-top"><div><h1>📈 VP Dashboard</h1><small id="vp-meta">Loading data…</small></div><div class="vp-tact"><button class="vp-btn ghost" data-act="refresh">⟳ Refresh</button><button class="vp-btn ghost" data-act="logout">Logout</button></div></div>' +
-    '<div class="vp-tabs"><button data-act="tab" data-v="os">🏦 OS<small>Outstanding</small></button><button data-act="tab" data-v="ta">🚗 TA<small>Travel allowance</small></button><button data-act="tab" data-v="visit">📍 Visit<small>Visits · calls · duplicates</small></button></div>' +
+    '<div class="vp-tabs"><button data-act="tab" data-v="os">🏦 OS<small>Outstanding</small></button><button data-act="tab" data-v="ta">🚗 TA<small>Travel allowance</small></button><button data-act="tab" data-v="visit">📍 Visit<small>Visits · calls · duplicates</small></button><button data-act="tab" data-v="rr">🎯 Daily RR<small>Targets · required run-rate</small></button></div>' +
     '<div class="vp-filters" id="vp-filters"></div><div id="vp-body"><div class="vp-load"><div class="sp"></div>Loading…</div></div></div>';
   buildFilters();
 }
@@ -1486,22 +1648,26 @@ function paint(){
   var body = $('vp-body'); if (!body) return;
   var meta = $('vp-meta');
   document.querySelectorAll('#vp-root .vp-tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === S.tab); });
-  var sw = $('vp-staffwrap'); if (sw) sw.style.display = S.tab === 'visit' ? '' : 'none';
+  var fgc = document.querySelectorAll('#vp-filters .vp-fgrid > div'), chp = document.querySelector('#vp-filters .vp-chips');
+  fgc.forEach(function (dv, ix) { if (ix === 0) return; dv.style.display = ix === 3 ? (S.tab === 'visit' ? '' : 'none') : (S.tab === 'rr' ? 'none' : ''); });
+  if (chp) chp.style.display = S.tab === 'rr' ? 'none' : '';
   if (meta) {
     var parts = [];
     if (S.T) parts.push('OS / TA: ' + S.T.months[0].label + ' → ' + S.T.months[S.T.months.length - 1].label);
+    if (S.R) parts.push('Daily RR: ' + S.R.rows.length + ' branches');
     if (S.V) parts.push('Visits: ' + dayDMY(S.V.minDay) + ' → ' + dayDMY(S.V.maxDay) + ' · ' + nfmt(S.V.rows.length) + ' entries');
     meta.textContent = S.loading ? 'Loading data…' : (parts.join('  ·  ') || 'No data') + (S.loadedAt ? '  ·  updated ' + p2(S.loadedAt.getHours()) + ':' + p2(S.loadedAt.getMinutes()) : '');
   }
   if (S.loading) { body.innerHTML = '<div class="vp-load"><div class="sp"></div>Fetching the latest sheet data…</div>'; return; }
-  try { body.innerHTML = S.tab === 'os' ? renderOS() : S.tab === 'ta' ? renderTA() : renderVisit(); }
+  try { body.innerHTML = S.tab === 'os' ? renderOS() : S.tab === 'ta' ? renderTA() : S.tab === 'rr' ? renderRR() : renderVisit(); }
   catch (e) { console.error('VP render error', e); body.innerHTML = '<div class="vp-card"><div class="vp-empty"><b>Something went wrong while building this view</b>' + esc(e.message || e) + '</div></div>'; }
 }
 function load(){
   S.loading = true; paint();
   var p1 = fetchCSV(TLOS_CSV).then(buildTlos).then(function (t) { S.T = t; S.errT = ''; }).catch(function (e) { S.T = null; S.errT = 'tlos tab: ' + (e.message || e); console.error(e); });
   var p2_ = fetchCSV(SHEET1_CSV).then(buildVisits).then(function (v) { S.V = v; S.errV = ''; }).catch(function (e) { S.V = null; S.errV = 'Sheet1 tab: ' + (e.message || e); console.error(e); });
-  Promise.all([p1, p2_]).then(function () {
+  var p3_ = fetchCSV(RR_CSV).then(buildRR).then(function (v) { S.R = v; S.errR = ''; }).catch(function (e) { S.R = null; S.errR = 'Daily RR tab: ' + (e.message || e); console.error(e); });
+  Promise.all([p1, p2_, p3_]).then(function () {
     S.loading = false; S.loadedAt = new Date();
     if (isNaN(S.from) || isNaN(S.to)) setRange('all');
     buildFilters(); paint();
@@ -1515,20 +1681,23 @@ function onClick(e){
   var act = el.getAttribute('data-act'), v = el.getAttribute('data-v');
   switch (act) {
     case 'login': doLogin(); break;
-    case 'logout': S.ok = false; S.T = S.V = null; S.loaded = false; S.branch = 'All'; S.staff = 'All'; S.from = S.to = NaN; mount(); break;
+    case 'logout': S.ok = false; S.T = S.V = null; S.loaded = false; S.branch = 'All'; S.staff = 'All'; S.from = S.to = NaN; S.R = null; S.rr = { asof: NaN, end: NaN, hol: '', today: true, mode: 'abs' }; mount(); break;
     case 'refresh': load(); break;
     case 'tab': S.tab = v; paint(); break;
     case 'osview': S.osView = v; paint(); break;
     case 'cmptoggle': { S.cmp = S.cmp || []; var ix = S.cmp.indexOf(v); if (ix > -1) S.cmp.splice(ix, 1); else if (S.cmp.length < 10) S.cmp.push(v); paint(); break; }
     case 'cmpmetric': S.cmpMetric = v; paint(); break;
     case 'cmpset': cmpPreset(v); paint(); break;
+    case 'rrmode': S.rr.mode = v; paint(); break;
+    case 'rrtoday': S.rr.today = v === '1'; paint(); break;
+    case 'rrbranch': S.branch = v; syncFilters(); paint(); scrollTop_(); break;
     case 'taview': S.ta = v; paint(); break;
     case 'range': setRange(v); paint(); break;
     case 'latest': if (S.T) { var m = S.T.months[S.T.months.length - 1]; S.from = m.start; S.to = m.end; syncFilters(); paint(); } break;
     case 'branch': S.branch = v; S.staff = 'All'; syncFilters(); paint(); scrollTop_(); break;
     case 'staff': S.staff = v; syncFilters(); paint(); scrollTop_(); break;
     case 'sort': {
-      var tb = el.getAttribute('data-tbl'), k = el.getAttribute('data-k'), cur = S.sort[tb], asc = ['name', 'b', 'br', 'tagS', 'bs', 'staff'].indexOf(k) > -1;
+      var tb = el.getAttribute('data-tbl'), k = el.getAttribute('data-k'), cur = S.sort[tb], asc = ['name', 'b', 'br', 'tagS', 'bs', 'staff', 'stS'].indexOf(k) > -1;
       S.sort[tb] = (cur.k === k) ? { k: k, d: -cur.d } : { k: k, d: asc ? 1 : -1 }; paint(); break;
     }
     case 'moredates': S.dateShown += 31; paint(); break;
@@ -1553,6 +1722,9 @@ function scrollTop_(){ var f = $('vp-filters'); if (f && f.scrollIntoView) f.scr
 function onChange(e){
   var id = e.target.id;
   if (id === 'vp-branch') { S.branch = e.target.value; S.staff = 'All'; syncFilters(); paint(); }
+  else if (id === 'vp-rrasof') { var q = isoToDay(e.target.value); if (!isNaN(q)) { S.rr.asof = q; paint(); } }
+  else if (id === 'vp-rrend') { var q2 = isoToDay(e.target.value); if (!isNaN(q2)) { S.rr.end = q2; paint(); } }
+  else if (id === 'vp-rrhol') { S.rr.hol = e.target.value; paint(); }
   else if (id === 'vp-staff') { S.staff = e.target.value; paint(); }
   else if (id === 'vp-from' || id === 'vp-to') {
     var a = isoToDay($('vp-from').value), z = isoToDay($('vp-to').value);
